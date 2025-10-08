@@ -1,20 +1,21 @@
 import 'package:flutter/material.dart';
+import 'pages/home_page.dart';
+import 'services/notification_service.dart';
 
-void main() {
-  runApp(const MainApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.instance.init(); // canal + permissões (Android 13+)
+  runApp(const GeoTasksApp());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
+class GeoTasksApp extends StatelessWidget {
+  const GeoTasksApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
-      ),
+    return MaterialApp(
+      title: 'GeoTasks',
+      theme: ThemeData.dark(useMaterial3: true),
+      home: const HomePage(),
     );
   }
 }
