@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
   NotificationService._();
@@ -22,7 +24,14 @@ class NotificationService {
         _plugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     await android?.createNotificationChannel(_channel);
-    await android?.requestPermission(); // Android 13+
+
+    // Android 13+: pedir permissão de notificação via permission_handler
+    if (Platform.isAndroid) {
+      final status = await Permission.notification.status;
+      if (!status.isGranted) {
+        await Permission.notification.request();
+      }
+    }
   }
 
   Future<void> showNearby({
