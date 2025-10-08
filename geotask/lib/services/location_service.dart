@@ -9,6 +9,10 @@ class LocationService {
   }
 
   static Future<Position> currentPosition() {
-    return Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.best);
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best, // substitui desiredAccuracy
+      ),
+    );
   }
 }
