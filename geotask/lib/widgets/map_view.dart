@@ -32,6 +32,13 @@ class MapView extends StatelessWidget {
         TileLayer(
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.example.geotask',
+          maxZoom: 19,
+          minZoom: 3,
+          retinaMode: true,              // melhora nitidez em ecrãs densos
+          tileBounds: LatLngBounds.fromPoints([
+            const LatLng(-85.0, -180.0),
+            const LatLng(85.0, 180.0),
+          ]),
         ),
         if (current != null)
           MarkerLayer(markers: [
