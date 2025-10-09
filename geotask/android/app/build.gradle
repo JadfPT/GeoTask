@@ -1,5 +1,15 @@
 // android/app/build.gradle
 
+// no topo do ficheiro:
+def localProps = new Properties()
+def lpFile = rootProject.file('local.properties')
+if (lpFile.exists()) {
+    lpFile.withReader('UTF-8') { localProps.load(it) }
+}
+
+// fallback opcional para CI: variável de ambiente
+def MAPS_API_KEY = localProps.getProperty('MAPS_API_KEY') ?: System.getenv('MAPS_API_KEY') ?: ""
+
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
@@ -20,6 +30,8 @@ android {
         versionCode vCode.toInteger()
         versionName vName
         multiDexEnabled true
+
+        manifestPlaceholders = [ MAPS_API_KEY: MAPS_API_KEY ]
     }
 
     compileOptions {
