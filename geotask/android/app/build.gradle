@@ -1,0 +1,64 @@
+// android/app/build.gradle
+
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'dev.flutter.flutter-gradle-plugin'
+}
+
+def vCode = (project.findProperty('flutter.versionCode') ?: '1') as String
+def vName = (project.findProperty('flutter.versionName') ?: '1.0') as String
+
+android {
+    namespace 'com.example.geotask'          // <-- ajusta
+    compileSdkVersion 36                      // <-- SDK 36
+
+    defaultConfig {
+        applicationId 'com.example.geotask'   // <-- ajusta
+        minSdkVersion flutter.minSdkVersion
+        targetSdkVersion 36                   // <-- podes deixar 34, mas 36 evita avisos
+        versionCode vCode.toInteger()
+        versionName vName
+        multiDexEnabled true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true     // desugaring ON
+    }
+    kotlinOptions { jvmTarget = '17' }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
+        }
+        debug {
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ["/META-INF/{AL2.0,LGPL2.1}",
+                         "META-INF/DEPENDENCIES",
+                         "META-INF/NOTICE",
+                         "META-INF/LICENSE",
+                         "META-INF/LICENSE.txt",
+                         "META-INF/NOTICE.txt"]
+        }
+    }
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22"
+    implementation "androidx.core:core-ktx:1.16.0"      // ↑ combina com SDK 35+
+    implementation "androidx.multidex:multidex:2.0.1"
+
+    // Desugaring Java 8+ (versão pedida pelos plugins)
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.1.4"
+}
