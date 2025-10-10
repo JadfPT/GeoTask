@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as ll;
+
 import '../models/task.dart';
 
 class TaskList extends StatelessWidget {
   final List<Task> tasks;
-  final LatLng? current;
+  final ll.LatLng? current;
   final void Function(int index) onDelete;
-  final void Function(LatLng point) onFocus;
+  final void Function(ll.LatLng point) onFocus;
 
   const TaskList({
     super.key,
@@ -18,13 +19,13 @@ class TaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dist = const Distance();
+    final dist = const ll.Distance();
     return ListView.separated(
       itemCount: tasks.length,
       separatorBuilder: (_, __) => const Divider(height: 1),
       itemBuilder: (context, i) {
         final t = tasks[i];
-        final d = (current == null) ? null : dist.as(LengthUnit.Meter, current!, t.point);
+        final d = (current == null) ? null : dist.as(ll.LengthUnit.Meter, current!, t.point);
         return ListTile(
           title: Text(t.title),
           subtitle: Text(

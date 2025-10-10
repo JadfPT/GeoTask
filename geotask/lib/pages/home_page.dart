@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' as ll;
+
 import '../models/task.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
-import '../widgets/map_view.dart';
+import '../widgets/map_view_google.dart';
 import '../widgets/task_list.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,12 +15,14 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final MapController _map = MapController();
-  final Distance _distance = const Distance();
+  final ll.Distance _distance = const ll.Distance();
   final List<Task> _tasks = [];
 
-  LatLng? _current;
+  ll.LatLng? _current;
   Timer? _timer;
+
+  // pedido externo de foco da câmara no mapa
+  final ValueNotifier<ll.LatLng?> _focusReq = ValueNotifier<ll.LatLng?>(null);
 
   @override
   void initState() {
@@ -37,13 +39,14 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     _timer?.cancel();
+    _focusReq.dispose();
     super.dispose();
   }
 
   Future<void> _locate() async {
     try {
       final p = await LocationService.currentPosition();
-      setState(() => _current = LatLng(p.latitude, p.longitude));
+      setState(() => _current = ll.LatLng(p.latitude, p.longitude));
     } catch (_) {}
   }
 
@@ -51,12 +54,12 @@ class _HomePageState extends State<HomePage> {
     if (_tasks.isEmpty) return;
     try {
       final p = await LocationService.currentPosition();
-      _current = LatLng(p.latitude, p.longitude);
+      _current = ll.LatLng(p.latitude, p.longitude);
     } catch (_) {}
 
     for (final t in _tasks) {
       if (_current == null) break;
-      final d = _distance.as(LengthUnit.Meter, _current!, t.point);
+      final d = _distance.as(ll.LengthUnit.Meter, _current!, t.point);
       if (d <= t.radiusMeters && !t.notified) {
         t.notified = true;
         await NotificationService.instance.showNearby(
@@ -72,7 +75,7 @@ class _HomePageState extends State<HomePage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _addTaskAt(LatLng point) async {
+  Future<void> _addTaskAt(ll.LatLng point) async {
     final titleCtrl = TextEditingController();
     final radiusCtrl = TextEditingController(text: '100');
 
@@ -114,7 +117,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final center = _current ?? const LatLng(39.3999, -8.2245);
+    final center = _current ?? const ll.LatLng(39.3999, -8.2245); // centro PT
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gestor de Tarefas com Geolocalização'),
@@ -126,12 +129,12 @@ class _HomePageState extends State<HomePage> {
         children: [
           Expanded(
             flex: 3,
-            child: MapView(
-              controller: _map,
+            child: MapViewGoogle(
               center: center,
               current: _current,
               tasks: _tasks,
               onLongPressAdd: _addTaskAt,
+              focusRequest: _focusReq, // permite focar no ponto a partir da lista
             ),
           ),
           Expanded(
@@ -140,7 +143,7 @@ class _HomePageState extends State<HomePage> {
               tasks: _tasks,
               current: _current,
               onDelete: (i) => setState(() => _tasks.removeAt(i)),
-              onFocus: (p) => _map.move(p, 17),
+              onFocus: (p) => _focusReq.value = p, // recentra a câmara
             ),
           ),
         ],
