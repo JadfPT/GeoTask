@@ -5,8 +5,8 @@ import 'package:latlong2/latlong.dart' as ll;
 import '../models/task.dart';
 import '../services/location_service.dart';
 import '../services/notification_service.dart';
-import '../widgets/map_view_google.dart';
 import '../widgets/task_list.dart';
+import '../widgets/map_view_google.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -134,7 +134,6 @@ class _HomePageState extends State<HomePage> {
               current: _current,
               tasks: _tasks,
               onLongPressAdd: _addTaskAt,
-              focusRequest: _focusReq, // permite focar no ponto a partir da lista
             ),
           ),
           Expanded(
