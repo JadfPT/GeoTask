@@ -1,28 +1,32 @@
 pluginManagement {
-    // Lê o caminho do Flutter do local.properties
     def flutterSdkPath = {
-        def p = new Properties()
-        file('local.properties').withInputStream { p.load(it) }
-        def path = p.getProperty('flutter.sdk')
-        assert path != null : "flutter.sdk not set in local.properties"
-        return path
-    }()
+        def props = new Properties()
+        // procura primeiro no android/local.properties
+        def localProps = new File(settingsDir, "local.properties")
+        // (opcional) tenta também na raiz, se quiseres suportar os dois locais:
+        if (!localProps.exists()) {
+            localProps = new File(rootDir, "local.properties")
+        }
+        if (localProps.exists()) {
+            localProps.withInputStream { props.load(it) }
+        }
+        def flutterSdk = props.getProperty("flutter.sdk")
+        assert flutterSdk != null : "flutter.sdk not set in local.properties"
+        return flutterSdk
+    }.call()
 
-    // Torna o plugin loader do Flutter visível ao Gradle
-    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+    includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
 
     repositories {
+        gradlePluginPortal()
         google()
         mavenCentral()
-        gradlePluginPortal()
-        // repo interno do flutter_tools (necessário para resolver o plugin)
-        maven { url = "$flutterSdkPath/packages/flutter_tools/gradle/repo" }
     }
 }
 
 plugins {
     id "dev.flutter.flutter-plugin-loader" version "1.0.0"
-    id "com.android.application" version "8.6.1" apply false
+    id "com.android.application" version "8.3.2" apply false
     id "org.jetbrains.kotlin.android" version "1.9.24" apply false
 }
 
