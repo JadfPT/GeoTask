@@ -1,33 +1,43 @@
-import 'package:latlong2/latlong.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+@immutable
 class Task {
   final String id;
   final String title;
-  final LatLng point;
-  final double radiusMeters;
-  bool notified;
+  final String? note;
+  final DateTime? due;
+  final bool done;
 
-  Task({
+  /// localização opcional
+  final LatLng? point;
+  final double radiusMeters;
+
+  const Task({
     required this.id,
     required this.title,
-    required this.point,
-    required this.radiusMeters,
-    this.notified = false,
+    this.note,
+    this.due,
+    this.done = false,
+    this.point,
+    this.radiusMeters = 150,
   });
 
   Task copyWith({
-    String? id,
     String? title,
+    String? note,
+    DateTime? due,
+    bool? done,
     LatLng? point,
     double? radiusMeters,
-    bool? notified,
-  }) {
-    return Task(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      point: point ?? this.point,
-      radiusMeters: radiusMeters ?? this.radiusMeters,
-      notified: notified ?? this.notified,
-    );
-  }
+  }) =>
+      Task(
+        id: id,
+        title: title ?? this.title,
+        note: note ?? this.note,
+        due: due ?? this.due,
+        done: done ?? this.done,
+        point: point ?? this.point,
+        radiusMeters: radiusMeters ?? this.radiusMeters,
+      );
 }
