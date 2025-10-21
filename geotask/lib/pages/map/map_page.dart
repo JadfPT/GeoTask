@@ -1,47 +1,121 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:provider/provider.dart';
-import '../../data/task_store.dart';
+import 'package:geolocator/geolocator.dart';
 
-class MapPage extends StatelessWidget {
+class MapPage extends StatefulWidget {
   const MapPage({super.key});
+  @override
+  State<MapPage> createState() => _MapPageState();
+}
+
+class _MapPageState extends State<MapPage> {
+  final _controller = Completer<GoogleMapController>();
+  late Future<CameraPosition> _initialCamera;
+
+  static const _fallback = CameraPosition(
+    target: LatLng(40.2795, -7.5060), // fallback temporário (não será mostrado se obtivermos localização)
+    zoom: 15,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _initialCamera = _computeInitialCamera();
+  }
+
+  Future<CameraPosition> _computeInitialCamera() async {
+    // serviços e permissões
+    final servicesOn = await Geolocator.isLocationServiceEnabled();
+    if (!servicesOn) return _fallback;
+
+    var perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) {
+      perm = await Geolocator.requestPermission();
+    }
+    if (perm == LocationPermission.denied || perm == LocationPermission.deniedForever) {
+      return _fallback;
+    }
+
+    // 1) lastKnown para não “piscar” Lisboa
+    final last = await Geolocator.getLastKnownPosition();
+    if (last != null) {
+      return CameraPosition(
+        target: LatLng(last.latitude, last.longitude),
+        zoom: 16,
+      );
+    }
+
+    // 2) currentPosition com timeout
+    try {
+      final cur = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 10),
+        ),
+      );
+      return CameraPosition(
+        target: LatLng(cur.latitude, cur.longitude),
+        zoom: 16,
+      );
+    } catch (_) {
+      return _fallback;
+    }
+  }
+
+  Future<void> _refineToCurrent() async {
+    try {
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.best,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      final c = await _controller.future;
+      await c.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: LatLng(pos.latitude, pos.longitude), zoom: 16),
+        ),
+      );
+    } catch (_) {
+      // silencioso; fica como está
+    }
+  }
+
+  Future<void> _centerToMe() async => _refineToCurrent();
 
   @override
   Widget build(BuildContext context) {
-    final tasks = context.watch<TaskStore>().items;
-    final withPoint = tasks.where((t) => t.point != null).toList();
-
-    final markers = withPoint
-        .map((t) => Marker(
-              markerId: MarkerId(t.id),
-              position: t.point!,
-              infoWindow: InfoWindow(title: t.title),
-            ))
-        .toSet();
-
-    // cor com alpha compatível em todas as versões
-    final fill = const Color.fromRGBO(33, 150, 243, 0.15);
-
-    final circles = withPoint
-        .map((t) => Circle(
-              circleId: CircleId('c-${t.id}'),
-              center: t.point!,
-              radius: t.radiusMeters,
-              fillColor: fill,
-              strokeColor: Colors.blueAccent,
-              strokeWidth: 2,
-            ))
-        .toSet();
-
-    final LatLng center =
-        withPoint.isNotEmpty ? withPoint.first.point! : const LatLng(38.7369, -9.1427);
-
-    return GoogleMap(
-      initialCameraPosition: CameraPosition(target: center, zoom: 13),
-      myLocationEnabled: true,
-      myLocationButtonEnabled: true,
-      markers: markers,
-      circles: circles,
+    return Scaffold(
+      appBar: AppBar(title: const Text('Mapa • debug')),
+      body: FutureBuilder<CameraPosition>(
+        future: _initialCamera,
+        builder: (context, snap) {
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          return Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: snap.data!,
+                myLocationEnabled: true,
+                myLocationButtonEnabled: false,
+                compassEnabled: true,
+                onMapCreated: (ctrl) async {
+                  if (!_controller.isCompleted) _controller.complete(ctrl);
+                  // pequeno atraso para garantir que o mapa terminou o 1º frame
+                  await Future.delayed(const Duration(milliseconds: 150));
+                  await _refineToCurrent();
+                },
+              ),
+            ],
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _centerToMe,
+        child: const Icon(Icons.my_location),
+      ),
     );
   }
 }
