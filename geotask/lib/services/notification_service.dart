@@ -6,8 +6,7 @@ class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  final FlutterLocalNotificationsPlugin _plugin =
-      FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
 
   static const AndroidNotificationChannel _channel = AndroidNotificationChannel(
     'geotasks_channel',
@@ -17,24 +16,23 @@ class NotificationService {
   );
 
   Future<void> init() async {
-    const initAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    await _plugin.initialize(const InitializationSettings(android: initAndroid));
+    // Android
+    await _plugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(_channel);
 
-    final android =
-        _plugin.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    await android?.createNotificationChannel(_channel);
-
-    // Android 13+: pedir permissão de notificação via permission_handler
-    if (Platform.isAndroid) {
-      final status = await Permission.notification.status;
-      if (!status.isGranted) {
-        await Permission.notification.request();
-      }
+    // iOS  (ignora se Android)
+    if (Platform.isIOS) {
+      await _plugin
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+    } else {
+      // Android 13+: runtime permission
+      await Permission.notification.request();
     }
   }
 
-  Future<void> showNearby({
+  Future<void> show({
     required int id,
     required String title,
     required String body,
@@ -46,6 +44,7 @@ class NotificationService {
         priority: Priority.high,
         importance: Importance.high,
       ),
+      iOS: DarwinNotificationDetails(),
     );
     await _plugin.show(id, title, body, details);
   }
