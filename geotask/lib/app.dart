@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'data/task_store.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
-import 'services/geofence_watcher.dart';
 import 'services/notification_service.dart';
 
 class GeoTasksApp extends StatefulWidget {
@@ -28,7 +27,6 @@ class _GeoTasksAppState extends State<GeoTasksApp> {
       child: Builder(
         builder: (context) {
           // inicia o watcher uma única vez
-          GeofenceWatcher.instance.start(context.read<TaskStore>());
           return MaterialApp.router(
             debugShowCheckedModeBanner: false,
             title: 'GeoTasks',
