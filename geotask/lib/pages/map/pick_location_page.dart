@@ -77,7 +77,7 @@ class _PickLocationPageState extends State<PickLocationPage> {
       // tenta lastKnown > current (com timeout)
       final me = await _getBestLocation();
       await _moveCameraTo(me, zoom: 16);
-      if (_point == null) _point = me;
+      _point ??= me;
     } catch (_) {
       // qualquer falha => usa fallback/initial
       await _moveCameraTo(_point ?? _fallbackCenter, zoom: 13);
@@ -200,11 +200,11 @@ class _PickLocationPageState extends State<PickLocationPage> {
           // Banner de GPS desligado
           if (_gpsOff)
             _ActionBanner(
-              child: const Text('Localização desativada'),
               action: TextButton(
                 onPressed: () => Geolocator.openLocationSettings(),
                 child: const Text('Abrir definições'),
               ),
+              child: const Text('Localização desativada'),
             ),
         ],
       ),
