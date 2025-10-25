@@ -9,6 +9,9 @@ class Task {
   final DateTime? due;
   final bool done;
 
+  /// Categoria opcional (ex.: Pessoal, Trabalho, Estudo)
+  final String? category;
+
   /// localização opcional
   final LatLng? point;
   final double radiusMeters;
@@ -19,6 +22,7 @@ class Task {
     this.note,
     this.due,
     this.done = false,
+    this.category,
     this.point,
     this.radiusMeters = 150,
   });
@@ -28,6 +32,7 @@ class Task {
     String? note,
     DateTime? due,
     bool? done,
+    String? category,
     LatLng? point,
     double? radiusMeters,
   }) =>
@@ -37,6 +42,7 @@ class Task {
         note: note ?? this.note,
         due: due ?? this.due,
         done: done ?? this.done,
+        category: category ?? this.category,
         point: point ?? this.point,
         radiusMeters: radiusMeters ?? this.radiusMeters,
       );

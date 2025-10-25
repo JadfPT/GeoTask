@@ -17,19 +17,18 @@ class _GeoTasksAppState extends State<GeoTasksApp> {
   @override
   void initState() {
     super.initState();
-    NotificationService.instance.init(); // garante canal e permissões
+    NotificationService.instance.init();
   }
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TaskStore()..seedDemo(),
+      create: (_) => TaskStore()..seed(),
       child: Builder(
         builder: (context) {
-          // inicia o watcher uma única vez
           return MaterialApp.router(
             debugShowCheckedModeBanner: false,
-            title: 'GeoTasks',
+            title: 'GeoTask',
             routerConfig: buildRouter(onToggleTheme: () {
               setState(() => _dark = !_dark);
             }),

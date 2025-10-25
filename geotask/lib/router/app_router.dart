@@ -13,30 +13,54 @@ GoRouter buildRouter({required VoidCallback onToggleTheme}) {
     initialLocation: '/dashboard',
     routes: [
       StatefulShellRoute.indexedStack(
-        builder: (ctx, state, navShell) => Scaffold(
-          body: navShell,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: navShell.currentIndex,
-            onDestinationSelected: navShell.goBranch,
-            destinations: const [
-              NavigationDestination(icon: Icon(Icons.dashboard_outlined), label: 'Início'),
-              NavigationDestination(icon: Icon(Icons.checklist_outlined), label: 'Tarefas'),
-              NavigationDestination(icon: Icon(Icons.map_outlined), label: 'Mapa'),
-              NavigationDestination(icon: Icon(Icons.settings_outlined), label: 'Definições'),
-            ],
-          ),
-          floatingActionButton: navShell.currentIndex == 1
-              ? FloatingActionButton.extended(
-                  onPressed: () => ctx.push('/tasks/edit'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nova tarefa'),
-                )
-              : null,
-        ),
+        builder: (ctx, state, navShell) {
+          final showFab = navShell.currentIndex == 1 && state.uri.path == '/tasks';
+          return Scaffold(
+            body: navShell,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: navShell.currentIndex,
+              onDestinationSelected: (i) => navShell.goBranch(i),
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.dashboard_outlined),
+                  selectedIcon: Icon(Icons.dashboard),
+                  label: 'Início',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.checklist_outlined),
+                  selectedIcon: Icon(Icons.checklist),
+                  label: 'Tarefas',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.map_outlined),
+                  selectedIcon: Icon(Icons.map),
+                  label: 'Mapa',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: 'Definições',
+                ),
+              ],
+            ),
+            floatingActionButton: showFab
+                ? FloatingActionButton.extended(
+                    onPressed: () => ctx.push('/tasks/edit'),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Nova tarefa'),
+                  )
+                : null,
+          );
+        },
         branches: [
+          // Início
           StatefulShellBranch(routes: [
-            GoRoute(path: '/dashboard', builder: (context, state) => const DashboardPage()),
+            GoRoute(
+              path: '/dashboard',
+              builder: (context, state) => const DashboardPage(),
+            ),
           ]),
+          // Tarefas
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/tasks',
@@ -44,28 +68,34 @@ GoRouter buildRouter({required VoidCallback onToggleTheme}) {
               routes: [
                 GoRoute(
                   path: 'edit',
-                  builder: (ctx, st) => EditTaskPage(initial: st.extra as Task?),
+                  builder: (context, state) {
+                    final Task? initial =
+                        state.extra is Task ? state.extra as Task : null;
+                    return EditTaskPage(initial: initial);
+                  },
+                ),
+                GoRoute(
+                  path: 'pick-location',
+                  builder: (context, state) {
+                    final args = state.extra is PickLocationArgs
+                        ? state.extra as PickLocationArgs
+                        : const PickLocationArgs();
+                    return PickLocationPage(args: args);
+                  },
                 ),
               ],
             ),
           ]),
-
-
-
+          // Mapa
           StatefulShellBranch(routes: [
-            GoRoute(path: '/map', builder: (context, state) => const MapPage(), routes: [
-            GoRoute(
-              path: 'pick',
-              builder: (context, state) {
-                  final args = state.extra as PickLocationArgs? ??
-                      const PickLocationArgs();
-                  return PickLocationPage(args: args);
-                },
-              ),
-            ]),
+            GoRoute(path: '/map', builder: (c, s) => const MapPage()),
           ]),
+          // Definições
           StatefulShellBranch(routes: [
-            GoRoute(path: '/settings', builder: (context, state) => SettingsPage(onToggleTheme: onToggleTheme)),
+            GoRoute(
+              path: '/settings',
+              builder: (c, s) => SettingsPage(onToggleTheme: onToggleTheme),
+            ),
           ]),
         ],
       ),
