@@ -23,7 +23,8 @@ class _GeoTasksAppState extends State<GeoTasksApp> {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => TaskStore()..seed(),
+      // sem seed() → não voltam tarefas “de exemplo”
+      create: (_) => TaskStore(),
       child: Builder(
         builder: (context) {
           return MaterialApp.router(
