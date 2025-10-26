@@ -23,6 +23,10 @@ class _LocationSheetState extends State<LocationSheet> {
   final _ctrl = DraggableScrollableController();
   double _size = 0.0;
 
+  // 🔧 Tamanho da alça (maior e mais visível)
+  static const double _handleWidth = 56.0;
+  static const double _handleHeight = 6.0;
+
   @override
   void initState() {
     super.initState();
@@ -43,16 +47,18 @@ class _LocationSheetState extends State<LocationSheet> {
     final cs = Theme.of(context).colorScheme;
     final h = MediaQuery.of(context).size.height;
 
-    const peekPx = 32.0;                          // só a alça
-    final minFrac = (peekPx / h).clamp(0.02, 0.07);
+    // 🔧 Peek um bocadinho maior para facilitar o gesto
+    const peekPx = 40.0; // era 32.0
+    final minFrac = (peekPx / h).clamp(0.02, 0.08);
     final isPeek = _size == 0.0 || _size <= (minFrac + 0.002);
 
     final bgColor = isPeek ? Colors.transparent : cs.surfaceContainerHigh;
     final elev = isPeek ? 0.0 : 12.0;
-    final radius =
-        isPeek ? BorderRadius.zero : const BorderRadius.vertical(top: Radius.circular(18));
+    final radius = isPeek
+        ? BorderRadius.zero
+        : const BorderRadius.vertical(top: Radius.circular(18));
 
-    // ✅ chave do problema: no peek tem de ser AlwaysScrollable
+    // No peek tem de ser AlwaysScrollable para a sheet abrir
     final ScrollPhysics physics = isPeek
         ? const AlwaysScrollableScrollPhysics()
         : const ClampingScrollPhysics();
@@ -76,11 +82,18 @@ class _LocationSheetState extends State<LocationSheet> {
               const SizedBox(height: 8),
               Center(
                 child: Container(
-                  width: 36,
-                  height: 4,
+                  width: _handleWidth,
+                  height: _handleHeight,
                   decoration: BoxDecoration(
                     color: cs.outlineVariant,
                     borderRadius: BorderRadius.circular(999),
+                    // leve “glow” para destacar em mapas claros
+                    boxShadow: [
+                      BoxShadow(
+                        color: cs.outline.withOpacity(0.25),
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -93,8 +106,8 @@ class _LocationSheetState extends State<LocationSheet> {
   }
 
   List<Widget> _buildOpenContent(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final hasContent = widget.tasks.isNotEmpty;
+
     final children = <Widget>[
       const SizedBox(height: 8),
       Padding(
@@ -115,16 +128,19 @@ class _LocationSheetState extends State<LocationSheet> {
     if (hasContent) {
       for (var i = 0; i < widget.tasks.length; i++) {
         final t = widget.tasks[i];
-        children.add(_TaskTile(
-          task: t,
-          distanceText: _formatDistance(widget.user, t.point),
-          onTap: () => widget.onTapTask(t),
-        ));
+        children.add(
+          _TaskTile(
+            task: t,
+            distanceText: _formatDistance(widget.user, t.point),
+            onTap: () => widget.onTapTask(t),
+          ),
+        );
         if (i != widget.tasks.length - 1) {
           children.add(const SizedBox(height: 8));
         }
       }
     } else {
+      final cs = Theme.of(context).colorScheme;
       children.add(
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 8, 4, 16),
@@ -158,7 +174,10 @@ class _LocationSheetState extends State<LocationSheet> {
   String? _formatDistance(LatLng? a, LatLng? b) {
     if (a == null || b == null) return null;
     final d = Geolocator.distanceBetween(
-      a.latitude, a.longitude, b.latitude, b.longitude,
+      a.latitude,
+      a.longitude,
+      b.latitude,
+      b.longitude,
     );
     if (d >= 1000) return '${(d / 1000).toStringAsFixed(1)} km';
     return '${d.toStringAsFixed(0)} m';
@@ -170,11 +189,7 @@ class _TaskTile extends StatelessWidget {
   final String? distanceText;
   final VoidCallback onTap;
 
-  const _TaskTile({
-    required this.task,
-    required this.onTap,
-    this.distanceText,
-  });
+  const _TaskTile({required this.task, required this.onTap, this.distanceText});
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +211,10 @@ class _TaskTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(task.title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    task.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
@@ -208,7 +226,8 @@ class _TaskTile extends StatelessWidget {
                           label: Text(task.category!),
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
                         ),
                       if (task.due != null)
                         _Pill(
