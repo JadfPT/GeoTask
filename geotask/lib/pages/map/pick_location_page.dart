@@ -12,235 +12,163 @@ class PickLocationArgs {
 class PickLocationResult {
   final LatLng point;
   final double radius;
-  const PickLocationResult(this.point, this.radius);
+  const PickLocationResult({required this.point, required this.radius});
 }
 
 class PickLocationPage extends StatefulWidget {
-  final PickLocationArgs args;
-  const PickLocationPage({super.key, required this.args});
+  final LatLng? initialPoint;
+  final double initialRadius;
+
+  const PickLocationPage({
+    super.key,
+    this.initialPoint,
+    this.initialRadius = 150,
+  });
 
   @override
   State<PickLocationPage> createState() => _PickLocationPageState();
 }
 
 class _PickLocationPageState extends State<PickLocationPage> {
-  static const _default = LatLng(38.7369, -9.1427); // fallback
-  static const _panelHeight = 110.0;
-
-  final _controller = Completer<GoogleMapController>();
-  LatLng? _selected;
+  GoogleMapController? _controller;
+  LatLng? _point;
   double _radius = 150;
+  LatLng? _myPos;
 
   @override
   void initState() {
     super.initState();
-    _radius = widget.args.initialRadius;
-    _bootstrap();
+    _point = widget.initialPoint;
+    _radius = widget.initialRadius;
+    _ensureLocation();
   }
 
-  Future<void> _bootstrap() async {
-    if (widget.args.initialPoint != null) {
-      setState(() => _selected = widget.args.initialPoint);
+  Future<void> _ensureLocation() async {
+    LocationPermission perm = await Geolocator.checkPermission();
+    if (perm == LocationPermission.denied) perm = await Geolocator.requestPermission();
+    if (perm == LocationPermission.deniedForever) return;
+
+    final pos = await Geolocator.getCurrentPosition();
+    setState(() => _myPos = LatLng(pos.latitude, pos.longitude));
+
+    // se não houver ponto inicial, foca na posição
+    if (_point == null) {
+      _point = _myPos;
+      _moveCamera(_point!, zoom: 16);
+    } else {
+      _moveCamera(_point!, zoom: 16);
+    }
+  }
+
+  Future<void> _moveCamera(LatLng target, {double zoom = 15}) async {
+    final c = _controller;
+    if (c == null) return;
+    await c.animateCamera(CameraUpdate.newCameraPosition(
+      CameraPosition(target: target, zoom: zoom),
+    ));
+  }
+
+  void _onTap(LatLng p) => setState(() => _point = p);
+
+  void _save() {
+    if (_point == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Seleciona um ponto no mapa.')),
+      );
       return;
     }
-    try {
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      final pos = await Geolocator.getCurrentPosition();
-      final here = LatLng(pos.latitude, pos.longitude);
-      setState(() => _selected = here);
-      _moveCamera(here, 16);
-    } catch (_) {
-      setState(() => _selected = _default);
-    }
-  }
-
-  Future<void> _moveCamera(LatLng target, [double? zoom]) async {
-    if (!_controller.isCompleted) return;
-    final c = await _controller.future;
-    await c.animateCamera(CameraUpdate.newCameraPosition(
-      CameraPosition(target: target, zoom: zoom ?? 16),
-    ));
+    Navigator.pop(context, PickLocationResult(point: _point!, radius: _radius));
   }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final safeBottom = MediaQuery.of(context).padding.bottom;
+    final markers = <Marker>{};
+    final circles = <Circle>{};
 
-    // padding do mapa para afastar os controlos do painel
-    final mapPadding = EdgeInsets.only(
-      bottom: _panelHeight + safeBottom + 16,
-      right: 12,
-      top: 12,
-      left: 12,
-    );
-
-    final center = _selected ?? _default;
+    if (_point != null) {
+      markers.add(Marker(markerId: const MarkerId('p'), position: _point!));
+      circles.add(Circle(
+        circleId: const CircleId('r'),
+        center: _point!,
+        radius: _radius,
+        strokeColor: Theme.of(context).colorScheme.primary,
+        strokeWidth: 2,
+        fillColor: Theme.of(context).colorScheme.primary.withValues(alpha: .12),
+      ));
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Escolher localização'),
         actions: [
-          TextButton(
-            onPressed: _selected == null
-                ? null
-                : () =>
-                    Navigator.pop(context, PickLocationResult(_selected!, _radius)),
-            child: const Text('Guardar'),
-          ),
+          TextButton(onPressed: _save, child: const Text('Guardar')),
         ],
       ),
       body: Stack(
         children: [
           GoogleMap(
-            initialCameraPosition: CameraPosition(target: center, zoom: 15),
-            onMapCreated: (c) {
-              if (!_controller.isCompleted) _controller.complete(c);
-            },
-            padding: mapPadding, // <-- isto é o que afasta +/−/bússola
+            initialCameraPosition: CameraPosition(
+              target: _point ?? (_myPos ?? const LatLng(38.7223, -9.1393)), // fallback: Lisboa
+              zoom: 14,
+            ),
             myLocationEnabled: true,
-            myLocationButtonEnabled: false, // usamos o nosso botão
-            zoomControlsEnabled: true,
-            compassEnabled: true,
-            onTap: (pos) => setState(() => _selected = pos),
-            markers: {
-              if (_selected != null)
-                Marker(
-                  markerId: const MarkerId('pick'),
-                  position: _selected!,
-                  draggable: true,
-                  onDragEnd: (p) => setState(() => _selected = p),
-                ),
-            },
-            circles: {
-              if (_selected != null)
-                Circle(
-                  circleId: const CircleId('radius'),
-                  center: _selected!,
-                  radius: _radius,
-                  strokeWidth: 2,
-                  // evitar withOpacity (depreciado) -> usar withAlpha
-                  strokeColor: cs.primary.withAlpha((0.45 * 255).round()),
-                  fillColor: cs.primary.withAlpha((0.15 * 255).round()),
-                ),
-            },
+            myLocationButtonEnabled: false,
+            zoomControlsEnabled: false,
+            onTap: _onTap,
+            onMapCreated: (c) => _controller = c,
+            markers: markers,
+            circles: circles,
           ),
 
-          // Painel inferior (slider + "minha localização")
+          // Botões flutuantes alinhados com o +/-
+          Positioned(
+            right: 16,
+            bottom: 110,
+            child: FloatingActionButton.extended(
+              onPressed: () {
+                if (_myPos != null) _moveCamera(_myPos!, zoom: 16);
+              },
+              icon: const Icon(Icons.my_location_outlined),
+              label: const Text(''),
+              heroTag: 'myLoc',
+            ),
+          ),
+
+          // Slider do raio (acima da barra do sistema)
           Positioned(
             left: 12,
             right: 12,
-            bottom: 12,
-            child: SafeArea(
-              top: false,
-              minimum: EdgeInsets.only(bottom: 12 - safeBottom < 0 ? 0 : 12),
-              child: _BottomPanel(
-                height: _panelHeight,
-                radius: _radius,
-                onRadiusChange: (v) => setState(() => _radius = v),
-                onLocateMe: _centerOnUser,
+            bottom: 16,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface.withValues(alpha: .92),
+                borderRadius: BorderRadius.circular(18),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: .25),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Raio: ${_radius.toStringAsFixed(0)} m'),
+                  Slider(
+                    value: _radius,
+                    min: 25,
+                    max: 1000,
+                    divisions: 39,
+                    onChanged: (v) => setState(() => _radius = v),
+                  ),
+                ],
               ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _centerOnUser() async {
-    try {
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied ||
-          perm == LocationPermission.deniedForever) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permissão de localização negada')),
-        );
-        return;
-      }
-      final pos = await Geolocator.getCurrentPosition();
-      final here = LatLng(pos.latitude, pos.longitude);
-      setState(() => _selected = here);
-      _moveCamera(here, 16);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível obter a localização')),
-      );
-    }
-  }
-}
-
-class _BottomPanel extends StatelessWidget {
-  final double height;
-  final double radius;
-  final ValueChanged<double> onRadiusChange;
-  final VoidCallback onLocateMe;
-
-  const _BottomPanel({
-    required this.height,
-    required this.radius,
-    required this.onRadiusChange,
-    required this.onLocateMe,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Material(
-      elevation: 6,
-      color: cs.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(28),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        height: height,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Raio: ${_fmt(radius)}',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 10),
-                  SliderTheme(
-                    data: const SliderThemeData(trackHeight: 4),
-                    child: Slider(
-                      min: 50,
-                      max: 1000,
-                      divisions: 19, // passo de 50 m
-                      value: radius.clamp(50, 1000),
-                      onChanged: onRadiusChange,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            SizedBox(
-              height: 56,
-              width: 56,
-              child: IconButton.filled(
-                onPressed: onLocateMe,
-                icon: const Icon(Icons.my_location),
-                tooltip: 'Ir para a minha localização',
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _fmt(double r) {
-    if (r >= 1000) return '${(r / 1000).toStringAsFixed(1)} km';
-    return '${r.toStringAsFixed(0)} m';
   }
 }

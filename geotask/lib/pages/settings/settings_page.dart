@@ -1,109 +1,123 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:provider/provider.dart';
-import '../../data/task_store.dart';
-import '../../services/notification_service.dart';
 
 class SettingsPage extends StatelessWidget {
-  final VoidCallback onToggleTheme;
-  const SettingsPage({super.key, required this.onToggleTheme});
+  const SettingsPage({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final store = context.watch<TaskStore>();
-    return ListView(
-      padding: const EdgeInsets.all(12),
-      children: [
-        const SizedBox(height: 8),
-        ListTile(
-          leading: const Icon(Icons.dark_mode_outlined),
-          title: const Text('Alternar tema'),
-          subtitle: const Text('Claro / Escuro'),
-          onTap: onToggleTheme,
-        ),
-        const Divider(height: 24),
+  Future<void> _openAppSettings(BuildContext context) async {
+    final ok = await openAppSettings();
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível abrir as definições.')),
+      );
+    }
+  }
 
-        // Categorias
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          child: Text('Categorias',
-              style: Theme.of(context).textTheme.titleMedium),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final c in store.categories)
-                InputChip(
-                  label: Text(c),
-                  onDeleted: () =>
-                      context.read<TaskStore>().removeCategory(c),
-                ),
-              ActionChip(
-                label: const Text('Adicionar'),
-                avatar: const Icon(Icons.add, size: 18),
-                onPressed: () => _addCategoryDialog(context),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 24),
+  Future<void> _checkLocation(BuildContext context) async {
+    final status = await Permission.location.status;
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Localização: $status')),
+      );
+    }
+  }
 
-        ListTile(
-          leading: const Icon(Icons.notifications_active_outlined),
-          title: const Text('Permissões de notificações'),
-          subtitle: const Text('Conceder/Verificar'),
-          onTap: () async {
-            final status = await Permission.notification.status;
-            if (!status.isGranted) {
-              await Permission.notification.request();
-            }
-          },
+  Future<void> _checkNotifications(BuildContext context) async {
+    final status = await Permission.notification.status;
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Notificações: $status')),
+      );
+    }
+  }
+
+  void _showAbout(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text('Sobre', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+            SizedBox(height: 12),
+            Text('GeoTask — Gestor de tarefas com geolocalização.'),
+            SizedBox(height: 6),
+            Text('PDM Freire • Projeto académico.'),
+          ],
         ),
-        ListTile(
-          leading: const Icon(Icons.mark_chat_unread_outlined),
-          title: const Text('Testar notificação'),
-          onTap: () => NotificationService.instance.show(
-            id: 999001,
-            title: 'GeoTask',
-            body: 'Isto é um teste ✔️',
-          ),
-        ),
-        const Divider(height: 24),
-        const ListTile(
-          leading: Icon(Icons.info_outline),
-          title: Text('Sobre'),
-          subtitle: Text('Gestor de tarefas com geolocalização.'),
-        ),
-      ],
+      ),
     );
   }
 
-  Future<void> _addCategoryDialog(BuildContext context) async {
-    final ctrl = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Nova categoria'),
-        content: TextField(
-          controller: ctrl,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Nome da categoria'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Adicionar')),
+  @override
+  Widget build(BuildContext context) {
+    final divider = Divider(
+      height: 24,
+      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: .3),
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Definições')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Tema (placeholder – se já tens o teu ThemeController, substitui)
+          ListTile(
+            leading: const Icon(Icons.dark_mode_outlined),
+            title: const Text('Alternar tema'),
+            subtitle: const Text('Claro / Escuro'),
+            onTap: () => _openAppSettings(context), // aqui podes ligar ao teu theme controller
+          ),
+          divider,
+
+          // Categorias
+          ListTile(
+            leading: const Icon(Icons.label_outline),
+            title: const Text('Categorias'),
+            subtitle: const Text('Criar, apagar e ordenar'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.pushNamed('editCategories'),
+          ),
+          divider,
+
+          // Permissões
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8, top: 4),
+            child: Text('Permissões', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.location_on_outlined),
+            title: const Text('Localização'),
+            subtitle: const Text('Necessária para alertas por geolocalização'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              await _checkLocation(context);
+              await _openAppSettings(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.notifications_outlined),
+            title: const Text('Notificações'),
+            subtitle: const Text('Necessária para avisos de tarefas'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () async {
+              await _checkNotifications(context);
+              await _openAppSettings(context);
+            },
+          ),
+          divider,
+
+          ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text('Sobre'),
+            onTap: () => _showAbout(context),
+          ),
         ],
       ),
     );
-    if (ok == true) {
-      context.read<TaskStore>().addCategory(ctrl.text);
-    }
   }
 }
