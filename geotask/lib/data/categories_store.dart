@@ -1,83 +1,89 @@
-import 'package:flutter/foundation.dart' show ChangeNotifier; // evita 'Category' ambíguo
+import 'dart:convert';
+import 'package:flutter/foundation.dart' hide Category; // evita conflito com foundation
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
-import '../models/category.dart';
+import '../models/category.dart' as model;
 
-/// Store simples com persistência em SharedPreferences.
 class CategoriesStore extends ChangeNotifier {
-  static const _prefsKey = 'categories.v1';
-  final List<Category> _items = <Category>[];
-
-  List<Category> get items => List.unmodifiable(_items);
-
+  static const String _prefsKey = 'categories.v1';
   final _uuid = const Uuid();
 
-  CategoriesStore() {
-    _load();
-  }
+  final List<model.Category> _items = <model.Category>[];
+  List<model.Category> get items => List.unmodifiable(_items);
 
-  Future<void> _load() async {
+  bool _loaded = false;
+  bool get isLoaded => _loaded;
+
+  /// Carrega do disco. Na 1ª execução semeia 3 categorias padrão.
+  Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getStringList(_prefsKey);
 
     if (raw == null) {
-      // defaults
-      _items
-        ..clear()
-        ..addAll([
-          Category(id: _uuid.v4(), name: 'Pessoal', color: 0xFF7C4DFF),
-          Category(id: _uuid.v4(), name: 'Trabalho', color: 0xFF26A69A),
-          Category(id: _uuid.v4(), name: 'Estudo', color: 0xFF5C6BC0),
+      if (_items.isEmpty) {
+        _items.addAll([
+          model.Category(id: _uuid.v4(), name: 'Pessoal', color: 0xFF7C4DFF),
+          model.Category(id: _uuid.v4(), name: 'Trabalho', color: 0xFF26A69A),
+          model.Category(id: _uuid.v4(), name: 'Estudo',  color: 0xFF536DFE),
         ]);
-      await _save();
-    } else {
-      _items
-        ..clear()
-        ..addAll(raw.map((e) => Category.fromJson(e)));
+        await _save();
+      }
+      _loaded = true;
+      notifyListeners();
+      return;
     }
+
+    _items
+      ..clear()
+      ..addAll(raw.map((s) {
+        final m = jsonDecode(s) as Map<String, dynamic>;
+        return model.Category(
+          id: m['id'] as String,
+          name: m['name'] as String,
+          color: (m['color'] as num).toInt(),
+        );
+      }));
+
+    _loaded = true;
     notifyListeners();
   }
 
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(
-      _prefsKey,
-      _items.map((e) => e.toJson()).toList(),
-    );
+    final List<String> list = _items
+        .map((c) => jsonEncode({'id': c.id, 'name': c.name, 'color': c.color}))
+        .toList(growable: false);
+    await prefs.setStringList(_prefsKey, list);
   }
 
-  /// Substitui todas as categorias (usado no ecrã de edição ao clicar Guardar).
-  Future<void> setAll(List<Category> next) async {
-    _items
-      ..clear()
-      ..addAll(next);
-    await _save();
-    notifyListeners();
-  }
-
-  // Helpers opcionais
-  Category add(String name, int color) {
-    final c = Category(id: _uuid.v4(), name: name, color: color);
-    _items.add(c);
+  void add(String name, int color) {
+    final n = name.trim();
+    if (n.isEmpty) return;
+    _items.add(model.Category(id: _uuid.v4(), name: n, color: color));
     _save();
     notifyListeners();
-    return c;
+  }
+
+  void update(String id, {String? name, int? color}) {
+    final i = _items.indexWhere((c) => c.id == id);
+    if (i == -1) return;
+    final c = _items[i];
+    _items[i] = model.Category(
+      id: c.id,
+      name: (name?.trim().isEmpty == false) ? name!.trim() : c.name,
+      color: color ?? c.color,
+    );
+    _save();
+    notifyListeners();
   }
 
   void remove(String id) {
-    _items.removeWhere((e) => e.id == id);
+    final i = _items.indexWhere((c) => c.id == id);
+    if (i == -1) return;
+    _items.removeAt(i);
     _save();
     notifyListeners();
-  }
-
-  void update(Category c) {
-    final i = _items.indexWhere((e) => e.id == c.id);
-    if (i != -1) {
-      _items[i] = c;
-      _save();
-      notifyListeners();
-    }
   }
 
   void reorder(int oldIndex, int newIndex) {
