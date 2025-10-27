@@ -1,45 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import '../../data/categories_store.dart';
 import '../../data/task_store.dart';
 import '../../models/task.dart';
-import '../../data/categories_store.dart';
-import '../map/pick_location_page.dart';
+import '../../widgets/categories_multi_selector.dart';
+import '../map/pick_location_page.dart'; // <-- IMPORT RESTAURADO
 
 class EditTaskPage extends StatefulWidget {
-  final Task? initial;
-  const EditTaskPage({super.key, this.initial});
+  final Task? task;    // compat
+  final Task? initial; // compat
+  const EditTaskPage({super.key, this.task, this.initial});
 
   @override
   State<EditTaskPage> createState() => _EditTaskPageState();
 }
 
 class _EditTaskPageState extends State<EditTaskPage> {
-  final _form = GlobalKey<FormState>();
+  Task? get _t => widget.task ?? widget.initial;
+
   final _titleCtrl = TextEditingController();
-  final _noteCtrl = TextEditingController();
+  final _noteCtrl  = TextEditingController();
 
   DateTime? _due;
-  bool _linkLocation = false;
-  LatLng? _point;
   double _radius = 150;
+  LatLng? _point;
+  bool _linkLocation = false;
 
-  /// Multiseleção de categorias (apenas UI; Task ainda não persiste categorias)
-  final Set<String> _selectedCategoryIds = <String>{};
+  /// IDs das categorias selecionadas (máx. 3)
+  final List<String> _selectedCategoryIds = [];
 
   @override
   void initState() {
     super.initState();
-    final t = widget.initial;
+    final t = _t;
     if (t != null) {
       _titleCtrl.text = t.title;
-      _noteCtrl.text = t.note ?? '';
-      _due = t.due;
-      _linkLocation = t.point != null;
-      _point = t.point;
-      _radius = t.radiusMeters;
+      _noteCtrl.text  = t.note ?? '';
+      _due            = t.due;
+      _radius         = t.radiusMeters;
+      _point          = t.point;
+      _linkLocation   = t.point != null;
+
+      // Pre-seleção (lista nova + legacy 1 categoria)
+      final items = context.read<CategoriesStore>().items;
+      final names = t.categoriesOrFallback;
+      for (final n in names) {
+        final m = items.where((c) => c.name == n);
+        if (m.isNotEmpty) _selectedCategoryIds.add(m.first.id);
+      }
     }
   }
 
@@ -50,366 +60,168 @@ class _EditTaskPageState extends State<EditTaskPage> {
     super.dispose();
   }
 
-  Future<void> _pickDateTime() async {
+Future<void> _pickLocation() async {
+  final res = await Navigator.of(context).push<PickLocationResult>(
+    MaterialPageRoute(
+      fullscreenDialog: true,
+      builder: (_) => PickLocationPage(
+        initialPoint: _point,
+        initialRadius: _radius,
+      ),
+    ),
+  );
+  if (!mounted) return;
+  if (res != null) {
+    setState(() {
+      _point = res.point;
+      _radius = res.radius;
+      _linkLocation = true;
+    });
+  }
+}
+
+
+  Future<void> _pickDue() async {
     final now = DateTime.now();
-    final base = _due ?? now;
-    final date = await showDatePicker(
+    final d = await showDatePicker(
       context: context,
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 5),
-      initialDate: DateTime(base.year, base.month, base.day),
-      helpText: 'Selecionar data',
+      initialDate: _due ?? now,
+      firstDate: now.subtract(const Duration(days: 365)),
+      lastDate:  now.add(const Duration(days: 365 * 5)),
     );
-    if (date == null) return;
-    final time = await showTimePicker(
+    if (d == null) return;
+    final t = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.fromDateTime(base),
-      helpText: 'Selecionar hora',
+      initialTime: TimeOfDay.fromDateTime(_due ?? now),
     );
-    if (time == null) {
-      setState(() => _due = DateTime(date.year, date.month, date.day));
+    if (t == null) return;
+    setState(() {
+      _due = DateTime(d.year, d.month, d.day, t.hour, t.minute);
+    });
+  }
+
+  Future<void> _save() async {
+    final title = _titleCtrl.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('O título é obrigatório')),
+      );
       return;
     }
-    setState(() => _due = DateTime(date.year, date.month, date.day, time.hour, time.minute));
-  }
 
-  Future<void> _openPickLocation() async {
-    final result = await context.push<PickLocationResult>(
-      '/tasks/edit/pickLocation',
-      extra: PickLocationArgs(initialPoint: _point, initialRadius: _radius),
-    );
-    if (result != null) {
-      setState(() {
-        _point = result.point;
-        _radius = result.radius;
-        _linkLocation = true;
-      });
+    final catsStore = context.read<CategoriesStore>();
+    final selectedNames = _selectedCategoryIds
+        .map((id) => catsStore.items.firstWhere((c) => c.id == id).name)
+        .toList();
+
+    if (selectedNames.length > 3) {
+      selectedNames.removeRange(3, selectedNames.length);
     }
-  }
 
-  void _save() {
-    if (!_form.currentState!.validate()) return;
-    final store = context.read<TaskStore>();
-    final t = widget.initial;
-
+    final t = _t;
     final updated = Task(
-      id: t?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
-      title: _titleCtrl.text.trim(),
+      id:   t?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      title: title,
       note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
-      due: _due,
+      due:  _due,
       done: t?.done ?? false,
+      categories: selectedNames,                 // novo
+      category: selectedNames.isNotEmpty        // legacy (1ª)
+          ? selectedNames.first
+          : t?.category,
       point: _linkLocation ? _point : null,
       radiusMeters: _linkLocation ? _radius : (t?.radiusMeters ?? 150),
     );
 
-    if (t == null) {
-      store.add(updated);
-    } else {
-      store.update(updated);
-    }
-    Navigator.of(context).pop();
-  }
+    final store = context.read<TaskStore>();
+    t == null ? store.add(updated) : store.update(updated);
 
-  String _formatDue(DateTime d) {
-    final dd = '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-    final hh = d.hour.toString().padLeft(2, '0');
-    final mm = d.minute.toString().padLeft(2, '0');
-    return '$dd $hh:$mm';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final isEdit = widget.initial != null;
-    return Scaffold(
-      appBar: AppBar(title: Text(isEdit ? 'Editar tarefa' : 'Nova tarefa')),
-      body: Form(
-        key: _form,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            TextFormField(
-              controller: _titleCtrl,
-              decoration: const InputDecoration(labelText: 'Título'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: _noteCtrl,
-              decoration: const InputDecoration(labelText: 'Notas'),
-              minLines: 3,
-              maxLines: 5,
-            ),
-            const SizedBox(height: 18),
-
-            // --------- Categoria (colapsável) ----------
-            Text('Categoria', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            _CategoriesMultiSelector(
-              selectedIds: _selectedCategoryIds,
-              maxSelected: 3,
-              onChanged: (s) {
-                setState(() {
-                  _selectedCategoryIds
-                    ..clear()
-                    ..addAll(s);
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            const Divider(),
-
-            // --------- Data limite ----------
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.event_outlined),
-              title: const Text('Data limite'),
-              subtitle: Text(_due == null ? 'Sem data' : _formatDue(_due!)),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_due != null)
-                    IconButton(
-                      tooltip: 'Limpar',
-                      onPressed: () => setState(() => _due = null),
-                      icon: const Icon(Icons.clear),
-                    ),
-                  IconButton(
-                    tooltip: 'Escolher data e hora',
-                    onPressed: _pickDateTime,
-                    icon: const Icon(Icons.calendar_today_outlined),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(),
-            const SizedBox(height: 4),
-
-            // --------- Localização ----------
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              value: _linkLocation,
-              title: const Text('Associar localização'),
-              subtitle: Text(_linkLocation ? 'Ativado' : 'Desativado'),
-              onChanged: (v) {
-                setState(() => _linkLocation = v);
-                if (v) _openPickLocation();
-              },
-            ),
-            if (_linkLocation) ...[
-              Row(
-                children: [
-                  FilledButton.tonalIcon(
-                    onPressed: _openPickLocation,
-                    icon: const Icon(Icons.place_outlined),
-                    label: const Text('Escolher no mapa'),
-                  ),
-                  const SizedBox(width: 12),
-                  if (_point != null)
-                    Chip(
-                      avatar: const Icon(Icons.radar, size: 18),
-                      label: Text('${_radius.toStringAsFixed(0)} m'),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Guardar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ---------------------- CATEGORIES SELECTOR (colapsável) ----------------------
-/// Mostra no máx. 2 linhas **e** no máx. [kCollapsedMaxChips] chips quando colapsado.
-/// Mantém botão “Mostrar mais / menos”.
-
-class _CategoriesMultiSelector extends StatefulWidget {
-  final Set<String> selectedIds;
-  final int maxSelected;
-  final ValueChanged<Set<String>> onChanged;
-
-  const _CategoriesMultiSelector({
-    required this.selectedIds,
-    required this.onChanged,
-    this.maxSelected = 3,
-  });
-
-  @override
-  State<_CategoriesMultiSelector> createState() => _CategoriesMultiSelectorState();
-}
-
-class _CategoriesMultiSelectorState extends State<_CategoriesMultiSelector> {
-  String? _warning;
-  bool _expanded = false;
-
-  // Fácil de ajustar: quantos chips no máximo quando colapsado.
-  static const int kCollapsedMaxChips = 6;
-  static const int kCollapsedMaxLines = 2;
-
-  void _toggle(String id) {
-    final next = {...widget.selectedIds};
-    if (next.contains(id)) {
-      next.remove(id);
-      _warning = null;
-    } else {
-      if (next.length >= widget.maxSelected) {
-        _warning = 'Podes selecionar no máximo ${widget.maxSelected} categorias.';
-      } else {
-        next.add(id);
-        _warning = null;
-      }
-    }
-    widget.onChanged(next);
-    setState(() {});
+    if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     final cats = context.watch<CategoriesStore>().items;
 
-    return LayoutBuilder(builder: (context, constraints) {
-      final maxWidth = constraints.maxWidth;
-      const spacing = 10.0;
-
-      // decide quais índices mostrar quando colapsado,
-      // respeitando 2 linhas **e** máximo de chips
-      final visible = <int>[];
-      if (!_expanded) {
-        var rowWidth = 0.0;
-        var rows = 1;
-        for (var i = 0; i < cats.length; i++) {
-          if (visible.length >= kCollapsedMaxChips) break;
-
-          final c = cats[i];
-          final est = _estimateChipWidth(
-            context,
-            c.name,
-            selected: widget.selectedIds.contains(c.id),
-          );
-
-          if (visible.isEmpty) {
-            visible.add(i);
-            rowWidth = est;
-            continue;
-          }
-
-          if (rowWidth + spacing + est <= maxWidth) {
-            visible.add(i);
-            rowWidth += spacing + est;
-          } else {
-            rows += 1;
-            if (rows > kCollapsedMaxLines) break;
-            visible.add(i);
-            rowWidth = est;
-          }
-        }
-      }
-
-      final toShow = _expanded ? List<int>.generate(cats.length, (i) => i) : visible;
-      final hiddenCount = cats.length - toShow.length;
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Wrap(
-            spacing: spacing,
-            runSpacing: 10,
-            children: [
-              for (final i in toShow)
-                _CategoryChip(
-                  id: cats[i].id,
-                  label: cats[i].name,
-                  color: Color(cats[i].color),
-                  selected: widget.selectedIds.contains(cats[i].id),
-                  onTap: () => _toggle(cats[i].id),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          if (hiddenCount > 0 || _expanded)
-            TextButton.icon(
-              onPressed: () => setState(() => _expanded = !_expanded),
-              icon: Icon(_expanded ? Icons.unfold_less : Icons.unfold_more),
-              label: Text(_expanded
-                  ? 'Mostrar menos'
-                  : 'Mostrar mais${hiddenCount > 0 ? ' ($hiddenCount)' : ''}'),
-              style: TextButton.styleFrom(padding: EdgeInsets.zero),
-            ),
-          const SizedBox(height: 6),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            child: _warning == null
-                ? const SizedBox.shrink()
-                : Padding(
-                    key: const ValueKey('warn'),
-                    padding: const EdgeInsets.only(top: 2),
-                    child: Text(
-                      _warning!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(_t == null ? 'Nova tarefa' : 'Editar tarefa'),
+        actions: [
+          IconButton(icon: const Icon(Icons.save_outlined), onPressed: _save),
         ],
-      );
-    });
-  }
-
-  double _estimateChipWidth(BuildContext context, String label, {required bool selected}) {
-    final base = Theme.of(context).textTheme.labelLarge ?? const TextStyle(fontSize: 14);
-    final style = selected ? base.copyWith(fontWeight: FontWeight.w600) : base;
-    final tp = TextPainter(
-      text: TextSpan(text: label, style: style),
-      maxLines: 1,
-      textDirection: TextDirection.ltr,
-    )..layout();
-    return tp.width + 28; // texto + paddings/borda aproximados do FilterChip
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  final String id;
-  final String label;
-  final Color color;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _CategoryChip({
-    required this.id,
-    required this.label,
-    required this.color,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FilterChip(
-      label: Text(label),
-      selected: selected,
-      showCheckmark: true,
-      onSelected: (_) => onTap(), // toggle
-      checkmarkColor: color,
-      selectedColor: color.withValues(alpha: .20),
-      backgroundColor: color.withValues(alpha: .12),
-      shape: StadiumBorder(side: BorderSide(color: color.withValues(alpha: .45))),
-      labelStyle: TextStyle(
-        color: selected ? color : null,
-        fontWeight: selected ? FontWeight.w600 : null,
       ),
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      visualDensity: VisualDensity.compact,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          TextField(
+            controller: _titleCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Título',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _noteCtrl,
+            minLines: 2,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              labelText: 'Descrição (opcional)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            title: const Text('Data e hora'),
+            subtitle: Text(
+              _due != null
+                  ? '${_due!.day.toString().padLeft(2, '0')}/${_due!.month.toString().padLeft(2, '0')} '
+                    '${_due!.hour.toString().padLeft(2, '0')}:${_due!.minute.toString().padLeft(2, '0')}'
+                  : 'Sem data',
+            ),
+            trailing: const Icon(Icons.calendar_today_outlined),
+            onTap: _pickDue,
+          ),
+          const Divider(),
+
+          // Multi-seletor (cores + limite 3)
+          CategoriesMultiSelector(
+            items: cats,
+            selectedIds: _selectedCategoryIds,
+            onChanged: (sel) {
+              if (sel.length > 3) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Máximo de 3 categorias.')),
+                );
+                return;
+              }
+              setState(() {
+                _selectedCategoryIds
+                  ..clear()
+                  ..addAll(sel);
+              });
+            },
+            previewCount: 6,
+            maxSelected: 3,
+          ),
+
+          const Divider(),
+          SwitchListTile(
+            title: const Text('Associar localização'),
+            value: _linkLocation,
+            onChanged: (v) => setState(() => _linkLocation = v),
+          ),
+          if (_linkLocation)
+            ListTile(
+              title: const Text('Escolher localização'),
+              subtitle: Text(_point != null
+                  ? 'Raio: ${_radius.toStringAsFixed(0)} m'
+                  : 'Nenhuma selecionada'),
+              trailing: const Icon(Icons.map_outlined),
+              onTap: _pickLocation, // agora abre
+            ),
+        ],
+      ),
     );
   }
 }

@@ -1,125 +1,175 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../data/task_store.dart';
+import '../data/categories_store.dart';
 import '../models/task.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
-  final VoidCallback onToggle;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onToggle;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const TaskCard({
     super.key,
     required this.task,
-    required this.onToggle,
-    required this.onEdit,
-    required this.onDelete,
+    this.onToggle,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final store = context.read<TaskStore>();
     final cs = Theme.of(context).colorScheme;
+    final cats = context.read<CategoriesStore>().items;
+
+    Color? _catColorFor(String name) {
+      final m = cats.where((c) => c.name == name);
+      return m.isEmpty ? null : Color(m.first.color);
+    }
 
     return Card(
-      child: ListTile(
-        leading: InkResponse(
-          onTap: onToggle,
-          child: CircleAvatar(
-            backgroundColor:
-                task.done ? cs.primaryContainer : cs.surfaceContainerHighest,
-            child: Icon(
-              task.done
-                  ? Icons.check_rounded
-                  : Icons.radio_button_unchecked,
-              color: task.done ? cs.onPrimaryContainer : cs.onSurface,
-            ),
-          ),
-        ),
-        title: Text(
-          task.title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Column(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (task.note != null) Text(task.note!),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: -6,
-              children: [
-                if (task.due != null)
-                  _Chip(
-                    icon: Icons.schedule,
-                    label: _fmt(task.due!),
+            InkWell(
+              onTap: onToggle ?? () => store.toggleDone(task.id),
+              borderRadius: BorderRadius.circular(32),
+              child: Padding(
+                padding: const EdgeInsets.only(right: 8.0, top: 4, bottom: 4),
+                child: Icon(
+                  task.done ? Icons.check_circle : Icons.circle_outlined,
+                  color: task.done ? cs.primary : cs.outline,
+                  size: 28,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    task.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      decoration:
+                          task.done ? TextDecoration.lineThrough : null,
+                    ),
                   ),
-                if (task.point != null)
-                  _Chip(
-                    icon: Icons.location_on,
-                    label: '${task.radiusMeters.round()} m',
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,       // ⇦ mais espaço horizontal
+                    runSpacing: 8,    // ⇦ mais espaço vertical (adeus sobreposição)
+                    children: [
+                      for (final cat in task.categoriesOrFallback)
+                        _ColoredChip(
+                          icon: Icons.sell_outlined,
+                          label: cat,
+                          color: _catColorFor(cat),
+                        ),
+                      if (task.due != null)
+                        _PlainChip(
+                          icon: Icons.access_time,
+                          label:
+                              '${task.due!.day.toString().padLeft(2, '0')}/${task.due!.month.toString().padLeft(2, '0')} '
+                              '${task.due!.hour.toString().padLeft(2, '0')}:${task.due!.minute.toString().padLeft(2, '0')}',
+                        ),
+                      if (task.radiusMeters > 0)
+                        _PlainChip(
+                          icon: Icons.location_on_outlined,
+                          label: '${task.radiusMeters.toStringAsFixed(0)} m',
+                        ),
+                    ],
                   ),
+                ],
+              ),
+            ),
+            PopupMenuButton<String>(
+              onSelected: (String v) {
+                switch (v) {
+                  case 'edit':
+                    if (onEdit != null) {
+                      onEdit!();
+                    } else {
+                      Navigator.pushNamed(context, '/edit_task', arguments: task);
+                    }
+                    break;
+                  case 'delete':
+                    if (onDelete != null) {
+                      onDelete!();
+                    } else {
+                      store.remove(task.id);
+                    }
+                    break;
+                }
+              },
+              itemBuilder: (c) => const [
+                PopupMenuItem(value: 'edit', child: Text('Editar')),
+                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
               ],
             ),
           ],
         ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (v) {
-            if (v == 'edit') onEdit();
-            if (v == 'del') onDelete();
-          },
-          itemBuilder: (ctx) => const [
-            PopupMenuItem(
-              value: 'edit',
-              child: ListTile(
-                leading: Icon(Icons.edit),
-                title: Text('Editar'),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-            PopupMenuItem(
-              value: 'del',
-              child: ListTile(
-                leading: Icon(Icons.delete_outline),
-                title: Text('Apagar'),
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ],
-        ),
-        onTap: onEdit,
       ),
     );
   }
-
-  String _fmt(DateTime d) {
-    String two(int x) => x.toString().padLeft(2, '0');
-    return '${two(d.day)}/${two(d.month)} ${two(d.hour)}:${two(d.minute)}';
-  }
 }
 
-class _Chip extends StatelessWidget {
+class _PlainChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  const _Chip({required this.icon, required this.label});
+  const _PlainChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final Color bg = cs.surfaceContainerHighest;
+    final Color fg = cs.onSurfaceVariant;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // ⇦ +altura
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
-        borderRadius: BorderRadius.circular(30),
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: cs.onSurface),
-          const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: cs.onSurface)),
-        ],
-      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: fg),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(color: fg)),
+      ]),
+    );
+  }
+}
+
+class _ColoredChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? color;
+
+  const _ColoredChip({required this.icon, required this.label, this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (color == null) return _PlainChip(icon: icon, label: label);
+    final fg = Theme.of(context).colorScheme.onSurface;
+    final bg = color!.withValues(alpha: .18);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // ⇦ +altura
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 6),
+        Text(label, style: TextStyle(color: fg)),
+      ]),
     );
   }
 }

@@ -16,100 +16,84 @@ class _TasksPageState extends State<TasksPage> {
   Widget build(BuildContext context) {
     final store = context.watch<TaskStore>();
     final items = store.items;
-    final doneCount = items.where((t) => t.done).length;
 
-    return SafeArea( // evita sobreposição com a status bar
-      top: true,
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-        child: items.isEmpty
-            ? _EmptyState(onNew: () => context.push('/tasks/edit'))
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Cabeçalho
-                  Row(
-                    children: [
-                      Text(
-                        'Tarefas',
-                        style: Theme.of(context).textTheme.headlineSmall,
-                      ),
-                      const SizedBox(width: 8),
-                      Container(
-                        padding:
-                            const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHigh,
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text('${items.length}',
-                            style: Theme.of(context).textTheme.labelMedium),
-                      ),
-                      const Spacer(),
-                      if (doneCount > 0)
-                        TextButton.icon(
-                          onPressed: () => _confirmAndClearCompleted(context),
-                          icon: const Icon(Icons.delete_sweep_outlined),
-                          label: Text('Limpar concluídas ($doneCount)'),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Lista
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(bottom: 96),
-                      itemCount: items.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 8),
-                      itemBuilder: (ctx, i) {
-                        final t = items[i];
-                        return TaskCard(
-                          task: t,
-                          onToggle: () => store.toggleDone(t.id),
-                          onEdit: () => ctx.push('/tasks/edit', extra: t),
-                          onDelete: () => store.remove(t.id),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Future<void> _confirmAndClearCompleted(BuildContext context) async {
-    final store = context.read<TaskStore>();
-    final doneIds = store.items.where((t) => t.done).map((t) => t.id).toList();
-    if (doneIds.isEmpty) return;
-
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Apagar concluídas?'),
-        content: Text(
-            'Isto vai remover ${doneIds.length} tarefa(s) concluída(s). Queres continuar?'),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tarefas'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true), child: const Text('Apagar')),
+          if (items.any((t) => t.done))
+            IconButton(
+              tooltip: 'Apagar concluídas',
+              onPressed: _clearDone,
+              icon: const Icon(Icons.delete_sweep_outlined),
+            ),
         ],
       ),
-    );
 
-    if (ok == true) {
-      for (final id in doneIds) {
-        store.remove(id);
-      }
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Tarefas concluídas removidas')),
-        );
-      }
-    }
+      // FAB “Nova tarefa” — voltou
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/tasks/edit'),
+        icon: const Icon(Icons.add),
+        label: const Text('Nova tarefa'),
+      ),
+
+      body: items.isEmpty
+          ? _EmptyState(onNew: () => context.push('/tasks/edit'))
+          : ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+              itemCount: items.length,
+              itemBuilder: (_, i) {
+                final t = items[i];
+                return TaskCard(
+                  task: t,
+                  // as páginas já tratam do push; fica tudo compat
+                  onEdit: () => context.push('/tasks/edit', extra: t),
+                );
+              },
+            ),
+    );
   }
+
+Future<void> _clearDone() async {
+  final store = context.read<TaskStore>();
+  final done = store.items.where((t) => t.done).toList();
+
+  if (done.isEmpty) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Não há tarefas concluídas.')),
+    );
+    return;
+  }
+
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Remover concluídas?'),
+      content: Text('Isto vai eliminar ${done.length} tarefa(s) concluída(s).'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(ctx).pop(false), // <- usa ctx
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(ctx).pop(true),  // <- usa ctx
+          child: const Text('Remover'),
+        ),
+      ],
+    ),
+  );
+
+  if (!mounted) return; // segurança se a página tiver sido fechada entretanto
+  if (ok == true) {
+    for (final t in done) {
+      store.remove(t.id);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Tarefas concluídas removidas')),
+    );
+  }
+}
 }
 
 class _EmptyState extends StatelessWidget {

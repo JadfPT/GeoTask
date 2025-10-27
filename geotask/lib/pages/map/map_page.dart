@@ -1,3 +1,4 @@
+// lib/pages/map/map_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -16,6 +17,9 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
+  /// Memória simples da câmara durante a vida da app (para não voltar a Lisboa).
+  static CameraPosition? _rememberedCamera;
+
   static const _fallback = LatLng(38.7369, -9.1427); // Lisboa
   static const _zoomBtn = 48.0; // tamanho aprox. botões nativos +/- (Android)
   static const _zoomGap = 8.0; // gap entre + e -
@@ -50,8 +54,9 @@ class _MapPageState extends State<MapPage> {
   Future<void> _centerOnMe() async {
     try {
       var p = await Geolocator.checkPermission();
-      if (p == LocationPermission.denied)
+      if (p == LocationPermission.denied) {
         p = await Geolocator.requestPermission();
+      }
       if (p == LocationPermission.denied ||
           p == LocationPermission.deniedForever) {
         if (!mounted) return;
@@ -99,7 +104,14 @@ class _MapPageState extends State<MapPage> {
         Marker(
           markerId: MarkerId('task_${t.id}'),
           position: t.point!,
-          infoWindow: InfoWindow(title: t.title, snippet: _mkSnippet(t)),
+          infoWindow: InfoWindow(
+            title: t.title,
+            snippet: _mkSnippet(t),
+            onTap: () async {
+              final c = await _mapCtrl.future;
+              await c.showMarkerInfoWindow(MarkerId('task_${t.id}'));
+            },
+          ),
         ),
     };
 
@@ -142,16 +154,25 @@ class _MapPageState extends State<MapPage> {
         children: [
           GoogleMap(
             mapType: _mapType,
-            initialCameraPosition: CameraPosition(target: _center, zoom: 12),
+            initialCameraPosition:
+                _rememberedCamera ?? CameraPosition(target: _center, zoom: 12),
             onMapCreated: (c) async {
               if (!_mapCtrl.isCompleted) _mapCtrl.complete(c);
-              await _centerOnMe(); // centra ao abrir
+              // centra automaticamente SÓ na 1ª abertura (sem memória anterior)
+              if (_rememberedCamera == null) {
+                await _centerOnMe(); // centra só na 1ª vez
+              }
             },
             padding: mapPadding,
             myLocationEnabled: true,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: true, // nativos
             compassEnabled: true,
+            onCameraMove: (cam) {
+              // memoriza posição/zoom/bearing/tilt sempre que mexer
+              _rememberedCamera = cam;
+              _center = cam.target;
+            },
             markers: markers,
             circles: circles,
           ),

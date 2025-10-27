@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart' show ChangeNotifier; // evita 'Category' ambíguo
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
