@@ -20,7 +20,7 @@ class _MapPageState extends State<MapPage> {
   /// Memória simples da câmara durante a vida da app (para não voltar a Lisboa).
   static CameraPosition? _rememberedCamera;
 
-  static const _fallback = LatLng(38.7369, -9.1427); // Lisboa
+  static const _fallback = LatLng(40.280572969058966, -7.5043608514295075); // Covilhã
   static const _zoomBtn = 48.0; // tamanho aprox. botões nativos +/- (Android)
   static const _zoomGap = 8.0; // gap entre + e -
 
