@@ -21,7 +21,12 @@ class _GeoTasksAppState extends State<GeoTasksApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TaskStore()),
+        ChangeNotifierProvider(create: (_) {
+          final s = TaskStore();
+          // Load persisted tasks in background
+          s.loadFromDb();
+          return s;
+        }),
         ChangeNotifierProvider<CategoriesStore>(
           create: (_) => CategoriesStore()..load(),
         ),
