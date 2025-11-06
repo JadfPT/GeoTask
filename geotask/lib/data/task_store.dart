@@ -2,6 +2,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/task.dart';
+import 'db/task_dao.dart';
+
+// TaskStore backed by local SQLite database (sqflite).
 
 class TaskStore extends ChangeNotifier {
   final List<Task> _items = [];
@@ -24,14 +27,18 @@ class TaskStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void add(Task t) {
+  /// Add task (persist to DB). Returns when DB insert requested (may complete later).
+  Future<void> add(Task t) async {
+    // persist first
+    await TaskDao.instance.insert(t);
     _items.insert(0, t);
     notifyListeners();
   }
 
-  void update(Task t) {
+  Future<void> update(Task t) async {
     final i = _items.indexWhere((e) => e.id == t.id);
     if (i >= 0) {
+      await TaskDao.instance.update(t);
       _items[i] = t;
       notifyListeners();
     }
@@ -41,13 +48,16 @@ class TaskStore extends ChangeNotifier {
     final i = _items.indexWhere((e) => e.id == id);
     if (i >= 0) {
       final t = _items[i];
-      _items[i] = t.copyWith(done: !t.done);
+      final updated = t.copyWith(done: !t.done);
+      TaskDao.instance.update(updated);
+      _items[i] = updated;
       notifyListeners();
     }
   }
 
   void remove(String id) {
     _items.removeWhere((e) => e.id == id);
+    TaskDao.instance.delete(id);
     notifyListeners();
   }
 
@@ -76,4 +86,13 @@ class TaskStore extends ChangeNotifier {
   String _genId() =>
       DateTime.now().millisecondsSinceEpoch.toString() +
       Random().nextInt(999).toString();
+
+  /// Initialize store by loading tasks from DB. Call this after provider creation if needed.
+  Future<void> loadFromDb() async {
+    final items = await TaskDao.instance.getAll();
+    _items
+      ..clear()
+      ..addAll(items);
+    notifyListeners();
+  }
 }
