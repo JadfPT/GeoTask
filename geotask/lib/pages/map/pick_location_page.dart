@@ -108,7 +108,8 @@ class _PickLocationPageState extends State<PickLocationPage> {
         children: [
           GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: _point ?? (_myPos ?? const LatLng(38.7223, -9.1393)), // fallback: Lisboa
+              // fallback: Covilhã (centro da cidade)
+              target: _point ?? (_myPos ?? const LatLng(40.280572969058966, -7.5043608514295075)),
               zoom: 14,
             ),
             myLocationEnabled: true,
@@ -121,16 +122,24 @@ class _PickLocationPageState extends State<PickLocationPage> {
           ),
 
           // Botões flutuantes alinhados com o +/-
+          // Use the same sized control as the main MapPage for visual parity
           Positioned(
             right: 16,
             bottom: 110,
-            child: FloatingActionButton.extended(
-              onPressed: () {
-                if (_myPos != null) _moveCamera(_myPos!, zoom: 16);
-              },
-              icon: const Icon(Icons.my_location_outlined),
-              label: const Text(''),
-              heroTag: 'myLoc',
+            child: SafeArea(
+              top: false,
+              child: IconButton.filled(
+                onPressed: () {
+                  if (_myPos != null) _moveCamera(_myPos!, zoom: 16);
+                },
+                icon: const Icon(Icons.my_location),
+                style: IconButton.styleFrom(
+                  minimumSize: const Size(56, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
             ),
           ),
 
