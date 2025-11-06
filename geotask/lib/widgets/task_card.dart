@@ -8,6 +8,7 @@ class TaskCard extends StatelessWidget {
   final Task task;
   final VoidCallback? onToggle;
   final VoidCallback? onEdit;
+  final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   const TaskCard({
@@ -15,6 +16,7 @@ class TaskCard extends StatelessWidget {
     required this.task,
     this.onToggle,
     this.onEdit,
+    this.onTap,
     this.onDelete,
   });
 
@@ -24,16 +26,19 @@ class TaskCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final cats = context.read<CategoriesStore>().items;
 
-    Color? _catColorFor(String name) {
+    Color? catColorFor(String name) {
       final m = cats.where((c) => c.name == name);
       return m.isEmpty ? null : Color(m.first.color);
     }
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Card(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             InkWell(
@@ -73,7 +78,7 @@ class TaskCard extends StatelessWidget {
                         _ColoredChip(
                           icon: Icons.sell_outlined,
                           label: cat,
-                          color: _catColorFor(cat),
+                          color: catColorFor(cat),
                         ),
                       if (task.due != null)
                         _PlainChip(
@@ -118,6 +123,7 @@ class TaskCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

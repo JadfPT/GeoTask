@@ -48,6 +48,7 @@ class _TasksPageState extends State<TasksPage> {
                   task: t,
                   // as páginas já tratam do push; fica tudo compat
                   onEdit: () => context.push('/tasks/edit', extra: t),
+                  onTap: () => context.push('/tasks/view', extra: t),
                 );
               },
             ),
