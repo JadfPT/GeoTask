@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../pages/dashboard_page.dart';
 import '../pages/tasks/tasks_page.dart';
 import '../pages/tasks/edit_task_page.dart';
+import '../pages/tasks/task_view_page.dart';
 import '../pages/map/map_page.dart';
 import '../pages/map/pick_location_page.dart';
 import '../pages/settings/settings_page.dart';
@@ -45,6 +46,16 @@ class AppRouter {
                       final Task? initial =
                           state.extra is Task ? state.extra as Task : null;
                       return EditTaskPage(initial: initial);
+                    },
+                  ),
+                  GoRoute(
+                    path: 'view',
+                    name: 'viewTask',
+                    parentNavigatorKey: rootNavigatorKey,
+                    builder: (context, state) {
+                      final Task? t = state.extra is Task ? state.extra as Task : null;
+                      if (t == null) return const SizedBox.shrink();
+                      return TaskViewPage(task: t);
                     },
                   ),
                 ],
