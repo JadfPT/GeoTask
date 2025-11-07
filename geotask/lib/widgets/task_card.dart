@@ -22,9 +22,10 @@ class TaskCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = context.read<TaskStore>();
+  final store = context.read<TaskStore>();
     final cs = Theme.of(context).colorScheme;
-    final cats = context.read<CategoriesStore>().items;
+  // Use watch so the card rebuilds when categories (and their colors) are loaded/updated
+  final cats = context.watch<CategoriesStore>().items;
 
     Color? catColorFor(String name) {
       final m = cats.where((c) => c.name == name);

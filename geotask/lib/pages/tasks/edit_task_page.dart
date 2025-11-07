@@ -90,11 +90,13 @@ Future<void> _pickLocation() async {
       lastDate:  now.add(const Duration(days: 365 * 5)),
     );
     if (d == null) return;
+    if (!mounted) return;
     final t = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_due ?? now),
     );
     if (t == null) return;
+    if (!mounted) return;
     setState(() {
       _due = DateTime(d.year, d.month, d.day, t.hour, t.minute);
     });

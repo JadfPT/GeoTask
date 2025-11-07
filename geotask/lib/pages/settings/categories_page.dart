@@ -29,7 +29,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
     Color(0xFF9CCC65),
   ];
 
-  int _selectedColor = _palette.first.value;
+  int _selectedColor = _palette.first.toARGB32();
 
   List<Category> _buffer = const [];
   bool _hydrated = false;
@@ -108,7 +108,8 @@ class _CategoriesPageState extends State<CategoriesPage> {
         );
       },
     );
-    if (result == null) return;
+  if (result == null) return;
+  if (!mounted) return;
 
     final dup = _buffer.any((x) =>
         x.id != c.id && x.name.toLowerCase() == result.name.toLowerCase());
@@ -137,6 +138,7 @@ class _CategoriesPageState extends State<CategoriesPage> {
 
   Future<bool> _confirmLeaveIfDirty() async {
     if (!_dirty) return true;
+    final store = context.read<CategoriesStore>();
     final ok = await showDialog<_LeaveAction>(
       context: context,
       useRootNavigator: true,
@@ -162,7 +164,6 @@ class _CategoriesPageState extends State<CategoriesPage> {
     );
 
     if (ok == _LeaveAction.save) {
-      final store = context.read<CategoriesStore>();
       await _applyBufferToStore(store);
       return true;
     }
@@ -217,9 +218,12 @@ class _CategoriesPageState extends State<CategoriesPage> {
   @override
   Widget build(BuildContext context) {
     return Consumer<CategoriesStore>(
-      builder: (_, store, __) {
+      builder: (context, store, child) {
         _tryInitFromStore(store);
 
+        // WillPopScope is deprecated after Flutter 3.12; keep it for compatibility
+        // and silence the linter for now.
+        // ignore: deprecated_member_use
         return WillPopScope(
           onWillPop: _confirmLeaveIfDirty,
           child: Scaffold(
@@ -274,13 +278,13 @@ class _CategoriesPageState extends State<CategoriesPage> {
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
                           itemCount: _palette.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 12),
-                          itemBuilder: (_, i) {
+                          separatorBuilder: (context, index) => const SizedBox(width: 12),
+                              itemBuilder: (context, i) {
                             final color = _palette[i];
-                            final selected = _selectedColor == color.value;
+                            final selected = _selectedColor == color.toARGB32();
                             return GestureDetector(
                               onTap: () =>
-                                  setState(() => _selectedColor = color.value),
+                                  setState(() => _selectedColor = color.toARGB32()),
                               child: Container(
                                 width: 40,
                                 height: 40,
@@ -460,12 +464,12 @@ class _EditSheetState extends State<_EditSheet> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: widget.palette.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 12),
-                itemBuilder: (_, i) {
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
+                itemBuilder: (context, i) {
                   final color = widget.palette[i];
-                  final selected = _color == color.value;
+                  final selected = _color == color.toARGB32();
                   return GestureDetector(
-                    onTap: () => setState(() => _color = color.value),
+                    onTap: () => setState(() => _color = color.toARGB32()),
                     child: Container(
                       width: 36,
                       height: 36,

@@ -61,10 +61,10 @@ class _LocationSheetState extends State<LocationSheet> {
               return false;
             },
             child: DecoratedBox(
-              decoration: BoxDecoration(
+                decoration: BoxDecoration(
                 // Fundo totalmente transparente quando fechado,
                 // vai ficando opaco suavemente ao abrir.
-                color: cs.surface.withOpacity(opacity),
+                color: cs.surface.withValues(alpha: opacity),
                 borderRadius:
                     const BorderRadius.vertical(top: Radius.circular(24)),
                 boxShadow: [

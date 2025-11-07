@@ -102,7 +102,7 @@ class AppRouter {
           // Alias legado
           GoRoute(
             path: '/tasks/edit/pickLocation',
-            redirect: (_, __) => '/pick-location',
+            redirect: (context, state) => '/pick-location',
           ),
         ],
       );

@@ -87,11 +87,11 @@ class TaskViewPage extends StatelessWidget {
                             color: col,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
-                              BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 4, offset: const Offset(0,2)),
+                                BoxShadow(color: Colors.black.withValues(alpha: .12), blurRadius: 4, offset: const Offset(0,2)),
                             ],
                           ),
                           child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.sell_outlined, size: 14, color: textCol.withOpacity(0.9)),
+                            Icon(Icons.sell_outlined, size: 14, color: textCol.withValues(alpha: .9)),
                             const SizedBox(width: 8),
                             Text(c, style: TextStyle(color: textCol, fontWeight: FontWeight.w600)),
                           ]),

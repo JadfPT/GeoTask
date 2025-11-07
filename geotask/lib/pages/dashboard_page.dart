@@ -97,7 +97,7 @@ class DashboardPage extends StatelessWidget {
                   onDelete: () => store.remove(t.id),
                 );
               },
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemCount: next3.length,
             ),
 
