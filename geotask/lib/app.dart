@@ -21,15 +21,17 @@ class _GeoTasksAppState extends State<GeoTasksApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) {
-          final s = TaskStore();
-          // Load persisted tasks in background
-          s.loadFromDb();
-          return s;
-        }),
+        // Ensure categories are loaded before tasks so task cards can pick up
+        // category colors immediately on first build.
         ChangeNotifierProvider<CategoriesStore>(
           create: (_) => CategoriesStore()..load(),
         ),
+        ChangeNotifierProvider(create: (_) {
+          final s = TaskStore();
+          // Load persisted tasks in background after categories provider exists
+          s.loadFromDb();
+          return s;
+        }),
         ChangeNotifierProvider(create: (_) => ThemeController()),
       ],
       child: Builder(
