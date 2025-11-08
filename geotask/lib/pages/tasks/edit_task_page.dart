@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../data/categories_store.dart';
 import '../../data/task_store.dart';
+import '../../data/auth_store.dart';
 import '../../models/task.dart';
 import '../../widgets/categories_multi_selector.dart';
 import '../map/pick_location_page.dart'; // <-- IMPORT RESTAURADO
@@ -133,6 +134,7 @@ Future<void> _pickLocation() async {
           : t?.category,
       point: _linkLocation ? _point : null,
       radiusMeters: _linkLocation ? _radius : (t?.radiusMeters ?? 150),
+      ownerId: context.read<AuthStore>().currentUser?.id,
     );
 
     final store = context.read<TaskStore>();

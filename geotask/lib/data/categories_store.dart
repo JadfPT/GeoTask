@@ -8,6 +8,7 @@ import '../models/category.dart' as model;
 class CategoriesStore extends ChangeNotifier {
   static const String _prefsKey = 'categories.v1';
   final _uuid = const Uuid();
+  String? _userId;
 
   final List<model.Category> _items = <model.Category>[];
   List<model.Category> get items => List.unmodifiable(_items);
@@ -16,16 +17,27 @@ class CategoriesStore extends ChangeNotifier {
   bool get isLoaded => _loaded;
 
   /// Carrega do disco. Na 1ª execução semeia 3 categorias padrão.
-  Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getStringList(_prefsKey);
+  Future<void> load([String? userId]) async {
+    _userId = userId;
+    // Do not use a global categories set when there is no signed-in user.
+    if (userId == null) {
+      // clear categories for anonymous (no global data)
+      _items.clear();
+      _loaded = true;
+      notifyListeners();
+      return;
+    }
 
+    final key = '$_prefsKey.$userId';
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getStringList(key);
     if (raw == null) {
+      // If the user has no saved categories yet, seed defaults for them.
       if (_items.isEmpty) {
         _items.addAll([
           model.Category(id: _uuid.v4(), name: 'Pessoal', color: 0xFF7C4DFF),
           model.Category(id: _uuid.v4(), name: 'Trabalho', color: 0xFF26A69A),
-          model.Category(id: _uuid.v4(), name: 'Estudo',  color: 0xFF536DFE),
+          model.Category(id: _uuid.v4(), name: 'Estudo', color: 0xFF536DFE),
         ]);
         await _save();
       }
@@ -50,11 +62,13 @@ class CategoriesStore extends ChangeNotifier {
   }
 
   Future<void> _save() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<String> list = _items
-        .map((c) => jsonEncode({'id': c.id, 'name': c.name, 'color': c.color}))
-        .toList(growable: false);
-    await prefs.setStringList(_prefsKey, list);
+  if (_userId == null) return; // nothing to save when no user
+  final key = '$_prefsKey.$_userId';
+  final prefs = await SharedPreferences.getInstance();
+  final List<String> list = _items
+      .map((c) => jsonEncode({'id': c.id, 'name': c.name, 'color': c.color}))
+      .toList(growable: false);
+  await prefs.setStringList(key, list);
   }
 
   void add(String name, int color) {

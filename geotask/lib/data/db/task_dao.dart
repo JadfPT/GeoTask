@@ -16,6 +16,19 @@ class TaskDao {
     return rows.map(_fromRow).toList();
   }
 
+  /// Get tasks optionally filtered by ownerId
+  Future<List<Task>> getAllForOwner(String? ownerId) async {
+    final db = await _db;
+    if (ownerId == null) {
+      final rows = await db.query('tasks', orderBy: 'rowid DESC');
+      return rows.map(_fromRow).toList();
+    } else {
+      final rows = await db.query('tasks',
+          where: 'ownerId = ?', whereArgs: [ownerId], orderBy: 'rowid DESC');
+      return rows.map(_fromRow).toList();
+    }
+  }
+
   Future<void> insert(Task t) async {
     final db = await _db;
     final map = _toRow(t);
@@ -45,6 +58,7 @@ class TaskDao {
       'radius': t.radiusMeters,
       'category': t.category,
       'categories': t.categories == null ? null : jsonEncode(t.categories),
+      'ownerId': t.ownerId,
     };
   }
 
@@ -76,6 +90,7 @@ class TaskDao {
       radiusMeters: (row['radius'] as num?)?.toDouble() ?? 150,
       category: row['category'] as String?,
       categories: cats,
+      ownerId: row['ownerId'] as String?,
     );
   }
 }

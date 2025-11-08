@@ -16,6 +16,8 @@ class Task {
 
   // Novo: até 3 categorias por tarefa (nomes)
   final List<String>? categories;
+  // Owner user id (optional)
+  final String? ownerId;
 
   const Task({
     required this.id,
@@ -27,6 +29,7 @@ class Task {
     this.radiusMeters = 150,
     this.category,   // legacy
     this.categories, // novo
+    this.ownerId,
   });
 
   Task copyWith({
@@ -39,6 +42,7 @@ class Task {
     double? radiusMeters,
     String? category,
     List<String>? categories,
+    String? ownerId,
   }) {
     return Task(
       id: id ?? this.id,
@@ -50,6 +54,7 @@ class Task {
       radiusMeters: radiusMeters ?? this.radiusMeters,
       category: category ?? this.category,
       categories: categories ?? this.categories,
+      ownerId: ownerId ?? this.ownerId,
     );
   }
 
@@ -72,6 +77,7 @@ class Task {
         'radiusMeters': radiusMeters,
         'category': category,     // legacy
         'categories': categories, // novo
+        'ownerId': ownerId,
       };
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -101,6 +107,7 @@ class Task {
       radiusMeters: (json['radiusMeters'] as num?)?.toDouble() ?? 150,
       category: json['category'] as String?, // legacy
       categories: cats,                       // novo
+      ownerId: json['ownerId'] as String?,
     );
   }
 }

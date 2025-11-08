@@ -8,7 +8,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static const _dbName = 'geotask.db';
-  static const _dbVersion = 1;
+  static const _dbVersion = 2;
 
   Database? _db;
 
@@ -48,13 +48,35 @@ class DatabaseHelper {
         lng REAL,
         radius REAL DEFAULT 150,
         category TEXT,
-        categories TEXT
+        categories TEXT,
+        ownerId TEXT
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        email TEXT NOT NULL UNIQUE,
+        passwordHash TEXT NOT NULL,
+        createdAt TEXT NOT NULL
       )
     ''');
   }
 
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle migrations here when incrementing _dbVersion
+    if (oldVersion < 2) {
+      // add ownerId column to tasks and create users table
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN ownerId TEXT');
+      } catch (_) {}
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+          id TEXT PRIMARY KEY,
+          email TEXT NOT NULL UNIQUE,
+          passwordHash TEXT NOT NULL,
+          createdAt TEXT NOT NULL
+        )
+      ''');
+    }
   }
 
   Future<void> close() async {

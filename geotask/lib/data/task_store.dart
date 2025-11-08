@@ -88,8 +88,8 @@ class TaskStore extends ChangeNotifier {
       Random().nextInt(999).toString();
 
   /// Initialize store by loading tasks from DB. Call this after provider creation if needed.
-  Future<void> loadFromDb() async {
-    final items = await TaskDao.instance.getAll();
+  Future<void> loadFromDb({String? ownerId}) async {
+    final items = await TaskDao.instance.getAllForOwner(ownerId);
     _items
       ..clear()
       ..addAll(items);

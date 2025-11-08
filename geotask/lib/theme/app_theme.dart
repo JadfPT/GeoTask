@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppTheme {
   static ThemeData _base(Brightness b) => ThemeData(
@@ -14,8 +15,44 @@ class AppTheme {
 
 /// Controlador do tema com toggle “inteligente”
 class ThemeController extends ChangeNotifier {
-  ThemeMode _mode = ThemeMode.system;
+  // Default to dark as requested
+  ThemeMode _mode = ThemeMode.dark;
   ThemeMode get mode => _mode;
+
+  String? _userId;
+
+  static const _prefsKey = 'theme.v1.';
+
+  Future<void> loadForUser(String? userId) async {
+    _userId = userId;
+    if (userId == null) {
+      // default to dark for anonymous/not-signed users
+      _mode = ThemeMode.dark;
+      notifyListeners();
+      return;
+    }
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_prefsKey$userId';
+    final val = prefs.getString(key);
+    if (val == null) {
+      _mode = ThemeMode.dark; // default
+    } else if (val == 'light') {
+      _mode = ThemeMode.light;
+    } else if (val == 'dark') {
+      _mode = ThemeMode.dark;
+    } else {
+      _mode = ThemeMode.dark;
+    }
+    notifyListeners();
+  }
+
+  Future<void> _save() async {
+    if (_userId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_prefsKey$_userId';
+    final v = _mode == ThemeMode.light ? 'light' : 'dark';
+    await prefs.setString(key, v);
+  }
 
   /// Verdadeiro se o tema **efetivo** visível é escuro.
   bool isDarkEffective(BuildContext context) {
@@ -36,5 +73,7 @@ class ThemeController extends ChangeNotifier {
       _mode = (_mode == ThemeMode.dark) ? ThemeMode.light : ThemeMode.dark;
     }
     notifyListeners();
+    // persist if associated to a user
+    _save();
   }
 }
