@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../data/task_store.dart';
 import '../../models/task.dart';
 import 'location_sheet.dart';
+import '../../widgets/app_snackbar.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -146,9 +147,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       if (p == LocationPermission.denied ||
           p == LocationPermission.deniedForever) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permissão de localização negada')),
-        );
+        showAppSnackBar(context, 'Permissão de localização negada');
         return;
       }
       final pos = await Geolocator.getCurrentPosition();
@@ -162,9 +161,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível obter a localização')),
-      );
+      showAppSnackBar(context, 'Não foi possível obter a localização');
     }
   }
 

@@ -4,6 +4,23 @@ import '../data/task_store.dart';
 import 'location_service.dart';
 import 'notification_service.dart';
 
+/// GeofenceWatcher continuously watches the device location and triggers
+/// local notifications when the user enters any task's radius.
+///
+/// Key behaviours:
+/// - requests permissions via [LocationService.ensurePermissions],
+/// - listens to `Geolocator.getPositionStream` with a moderate [distanceFilter]
+///   to reduce battery usage,
+/// - deduplicates notifications per task per day using an in-memory set.
+///
+/// Usage:
+/// ```dart
+/// // Start watching when you have the current TaskStore instance (e.g. after login)
+/// await GeofenceWatcher.instance.start(taskStore);
+///
+/// // Stop watching when the user logs out or you want to pause
+/// GeofenceWatcher.instance.stop();
+/// ```
 class GeofenceWatcher {
   GeofenceWatcher._();
   static final GeofenceWatcher instance = GeofenceWatcher._();
@@ -12,6 +29,12 @@ class GeofenceWatcher {
   DateTime _dayKey = DateTime.now();
   final Set<String> _notifiedToday = {};
 
+  /// Start listening to location changes and evaluate nearby tasks.
+  ///
+  /// `store` is the active `TaskStore` whose `items` are inspected. Keep in
+  /// mind this class uses an in-memory set to avoid duplicate notifications
+  /// across app restarts — if you need persistence across restarts, persist
+  /// the `notified` state externally.
   Future<void> start(TaskStore store) async {
     await LocationService.ensurePermissions();
     await _sub?.cancel();
@@ -24,6 +47,7 @@ class GeofenceWatcher {
     ).listen((pos) => _onPosition(pos, store));
   }
 
+  /// Stop watching location updates.
   void stop() { _sub?.cancel(); _sub = null; }
 
   void _onPosition(Position pos, TaskStore store) {

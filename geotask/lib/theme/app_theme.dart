@@ -24,6 +24,8 @@ class ThemeController extends ChangeNotifier {
   static const _prefsKey = 'theme.v1.';
 
   Future<void> loadForUser(String? userId) async {
+    // Loads persisted theme preference for [userId]. If [userId] is null the
+    // controller falls back to a sensible default (dark) and does not persist.
     _userId = userId;
     if (userId == null) {
       // default to dark for anonymous/not-signed users
@@ -73,7 +75,8 @@ class ThemeController extends ChangeNotifier {
       _mode = (_mode == ThemeMode.dark) ? ThemeMode.light : ThemeMode.dark;
     }
     notifyListeners();
-    // persist if associated to a user
-    _save();
+    // persist if associated to a user (background write)
+    // Intentionally fire-and-forget the IO to avoid blocking the UI.
+    Future.microtask(() => _save());
   }
 }

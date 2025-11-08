@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../data/auth_store.dart';
 import '../../data/categories_store.dart';
 import '../../data/task_store.dart';
+import '../../widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
 
 class LoginPage extends StatefulWidget {
@@ -40,9 +41,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        showAppSnackBar(context, e.toString());
       }
     } finally {
       if (mounted) {
@@ -65,9 +64,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        showAppSnackBar(context, e.toString());
       }
     } finally {
       if (mounted) {

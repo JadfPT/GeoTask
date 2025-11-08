@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../data/task_store.dart';
 import '../../widgets/task_card.dart';
+import '../../widgets/confirm_dialog.dart';
+import '../../widgets/app_snackbar.dart';
 
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
@@ -61,38 +63,26 @@ Future<void> _clearDone() async {
 
   if (done.isEmpty) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Não há tarefas concluídas.')),
-    );
+    showAppSnackBar(context, 'Não há tarefas concluídas.');
     return;
   }
 
-  final ok = await showDialog<bool>(
-    context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Remover concluídas?'),
-      content: Text('Isto vai eliminar ${done.length} tarefa(s) concluída(s).'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(ctx).pop(false), // <- usa ctx
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.of(ctx).pop(true),  // <- usa ctx
-          child: const Text('Remover'),
-        ),
-      ],
-    ),
+  // Capture the count before awaiting dialogs
+  final count = done.length;
+  final ok = await showConfirmDialog(context,
+    title: 'Remover concluídas?',
+    content: 'Isto vai eliminar $count tarefa(s) concluída(s).',
+    confirmLabel: 'Remover',
+    cancelLabel: 'Cancelar',
   );
 
   if (!mounted) return; // segurança se a página tiver sido fechada entretanto
   if (ok == true) {
     for (final t in done) {
-      store.remove(t.id);
+      await store.remove(t.id);
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Tarefas concluídas removidas')),
-    );
+    if (!mounted) return;
+    showAppSnackBar(context, 'Tarefas concluídas removidas');
   }
 }
 }

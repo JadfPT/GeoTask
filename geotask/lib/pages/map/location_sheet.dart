@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../models/task.dart';
 import '../../data/categories_store.dart';
+import '../../widgets/category_chip.dart';
+import '../../widgets/empty_hint.dart';
 
 typedef TaskTap = void Function(Task);
 
@@ -111,7 +113,10 @@ class _LocationSheetState extends State<LocationSheet> {
                     const SizedBox(height: 8),
 
                     if (count == 0)
-                      _EmptyMessage()
+                      EmptyHint(
+                        title: 'Sem locais',
+                        message: 'Sem locais para mostrar. Associa uma localização a uma tarefa para aparecer aqui.',
+                      )
                     else
                       ...widget.tasks.map((t) => _TaskRow(
                             task: t,
@@ -128,35 +133,7 @@ class _LocationSheetState extends State<LocationSheet> {
   }
 }
 
-class _EmptyMessage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: cs.onSurfaceVariant),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Sem locais para mostrar. Associa uma localização a uma tarefa para aparecer aqui.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// Empty hint replaced by shared EmptyHint widget in lib/widgets/empty_hint.dart
 
 class _TaskRow extends StatelessWidget {
   final Task task;
@@ -200,7 +177,11 @@ class _TaskRow extends StatelessWidget {
                       runSpacing: -4,
                       children: [
                         for (final name in task.categoriesOrFallback)
-                          _CategoryChip(name: name),
+                          CategoryChip(label: name, color: (() {
+                            final items = context.read<CategoriesStore>().items;
+                            final match = items.where((c) => c.name == name);
+                            return match.isNotEmpty ? Color(match.first.color) : null;
+                          })()),
                       ],
                     ),
                   ],
@@ -216,32 +197,4 @@ class _TaskRow extends StatelessWidget {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
-  final String name;
-  const _CategoryChip({required this.name});
-
-  @override
-  Widget build(BuildContext context) {
-    final items = context.read<CategoriesStore>().items;
-    final match = items.where((c) => c.name == name);
-    final color = match.isNotEmpty ? Color(match.first.color) : null;
-
-    final cs = Theme.of(context).colorScheme;
-    final bg = (color ?? cs.surfaceContainerHighest).withValues(alpha: .18);
-    final fg = color ?? cs.onSurfaceVariant;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: fg),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.sell_outlined, size: 14, color: fg),
-        const SizedBox(width: 6),
-        Text(name, style: TextStyle(color: cs.onSurface)),
-      ]),
-    );
-  }
-}
+// Replaced by shared CategoryChip in lib/widgets/category_chip.dart

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../widgets/app_snackbar.dart';
 
 class PickLocationArgs {
   final LatLng? initialPoint;
@@ -72,9 +73,7 @@ class _PickLocationPageState extends State<PickLocationPage> {
 
   void _save() {
     if (_point == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Seleciona um ponto no mapa.')),
-      );
+      showAppSnackBar(context, 'Seleciona um ponto no mapa.');
       return;
     }
     Navigator.pop(context, PickLocationResult(point: _point!, radius: _radius));

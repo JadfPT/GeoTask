@@ -4,19 +4,25 @@ import 'package:sqflite/sqflite.dart';
 import 'package:geotask/data/db/database_helper.dart';
 import 'package:geotask/models/task.dart';
 
+/// Data Access Object for `tasks` table.
+///
+/// Provides basic CRUD operations and mapping between the `Task` model and
+/// the database row representation. All methods are async and return when
+/// the underlying database operation completes.
 class TaskDao {
   TaskDao._private();
   static final TaskDao instance = TaskDao._private();
 
   Future<Database> get _db async => await DatabaseHelper.instance.database;
 
+  /// Return all tasks across users, ordered by insertion (newest first).
   Future<List<Task>> getAll() async {
     final db = await _db;
     final rows = await db.query('tasks', orderBy: 'rowid DESC');
     return rows.map(_fromRow).toList();
   }
-
-  /// Get tasks optionally filtered by ownerId
+  /// Get tasks for a specific owner (user). If [ownerId] is `null` all tasks
+  /// are returned.
   Future<List<Task>> getAllForOwner(String? ownerId) async {
     final db = await _db;
     if (ownerId == null) {
@@ -28,25 +34,41 @@ class TaskDao {
       return rows.map(_fromRow).toList();
     }
   }
-
+  /// Insert or replace a task into the database.
   Future<void> insert(Task t) async {
     final db = await _db;
     final map = _toRow(t);
     await db.insert('tasks', map, conflictAlgorithm: ConflictAlgorithm.replace);
   }
-
+  /// Update an existing task row (matched by id).
   Future<void> update(Task t) async {
     final db = await _db;
     final map = _toRow(t);
     await db.update('tasks', map, where: 'id = ?', whereArgs: [t.id]);
   }
-
+  /// Delete a task by [id].
   Future<void> delete(String id) async {
     final db = await _db;
     await db.delete('tasks', where: 'id = ?', whereArgs: [id]);
   }
 
+  /// Delete all tasks that belong to [ownerId]. Used when removing a user
+  /// and for guest migration/cleanup.
+  Future<void> deleteForOwner(String ownerId) async {
+    final db = await _db;
+    await db.delete('tasks', where: 'ownerId = ?', whereArgs: [ownerId]);
+  }
+
+  /// Move tasks from [oldOwnerId] to [newOwnerId]. Used when migrating guest
+  /// data into a newly registered user account.
+  Future<void> updateOwner(String oldOwnerId, String newOwnerId) async {
+    final db = await _db;
+    await db.update('tasks', {'ownerId': newOwnerId}, where: 'ownerId = ?', whereArgs: [oldOwnerId]);
+  }
+
   Map<String, Object?> _toRow(Task t) {
+    // Convert a Task instance into a row map suitable for SQLite storage.
+    // Fields with null values are stored as NULL in the database.
     return {
       'id': t.id,
       'title': t.title,
@@ -62,6 +84,8 @@ class TaskDao {
     };
   }
 
+  /// Convert a database row into a [Task] model.
+  /// Handles legacy encodings for `categories` (JSON array or CSV string).
   Task _fromRow(Map<String, Object?> row) {
     LatLng? p;
     final lat = row['lat'] as double?;

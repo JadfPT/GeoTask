@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_snackbar.dart';
 import '../models/category.dart';
 
 /// Multi-seletor de categorias
@@ -40,9 +41,7 @@ class _CategoriesMultiSelectorState extends State<CategoriesMultiSelector> {
       return;
     }
     if (sel.length >= widget.maxSelected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Máximo de ${widget.maxSelected} categorias.')),
-      );
+      showAppSnackBar(context, 'Máximo de ${widget.maxSelected} categorias.');
       return;
     }
     sel.add(id);

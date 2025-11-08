@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/task.dart';
 import '../../data/task_store.dart';
 import '../../data/categories_store.dart';
+import '../../widgets/category_chip.dart';
 import '../map/map_page.dart';
 
 class TaskViewPage extends StatelessWidget {
@@ -79,23 +80,7 @@ class TaskViewPage extends StatelessWidget {
                     for (final c in current.categoriesOrFallback)
                       Builder(builder: (ctx) {
                         final col = catColorFor(c) ?? Theme.of(ctx).colorScheme.primary;
-                        // choose readable text color on top of the category color
-                        final textCol = col.computeLuminance() > 0.5 ? Colors.black : Colors.white;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: col,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                                BoxShadow(color: Colors.black.withValues(alpha: .12), blurRadius: 4, offset: const Offset(0,2)),
-                            ],
-                          ),
-                          child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            Icon(Icons.sell_outlined, size: 14, color: textCol.withValues(alpha: .9)),
-                            const SizedBox(width: 8),
-                            Text(c, style: TextStyle(color: textCol, fontWeight: FontWeight.w600)),
-                          ]),
-                        );
+                        return CategoryChip(label: c, color: col);
                       }),
                   ],
                 ),

@@ -3,6 +3,9 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+/// DatabaseHelper is a singleton that manages opening the SQLite database and
+/// applying migrations. Use `DatabaseHelper.instance.database` to obtain a
+/// ready-to-use [Database] instance.
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
@@ -12,6 +15,7 @@ class DatabaseHelper {
 
   Database? _db;
 
+  /// Returns an open [Database], creating or migrating it if necessary.
   Future<Database> get database async {
     if (_db != null) return _db!;
     _db = await _initDatabase();
@@ -36,6 +40,14 @@ class DatabaseHelper {
     );
   }
 
+  /// Initialize and return a database handle. This method ensures the
+  /// parent directory exists and opens the database with the current
+  /// schema version and migration callbacks.
+  ///
+  /// Note: callers should use the `database` getter which caches the
+  /// opened handle on the helper instance.
+
+  /// Called when a new database is created. Create the required tables here.
   FutureOr<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE tasks (
@@ -72,6 +84,8 @@ class DatabaseHelper {
     ''');
   }
 
+  /// Apply schema migrations between [oldVersion] and [newVersion]. Keep
+  /// migrations idempotent and safe to call on startup.
   FutureOr<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       // add ownerId column to tasks and create users table
@@ -111,6 +125,7 @@ class DatabaseHelper {
     }
   }
 
+  /// Close the open database handle if any.
   Future<void> close() async {
     final d = _db;
     if (d != null && d.isOpen) await d.close();

@@ -7,6 +7,7 @@ import '../../data/task_store.dart';
 import '../../data/auth_store.dart';
 import '../../models/task.dart';
 import '../../widgets/categories_multi_selector.dart';
+import '../../widgets/app_snackbar.dart';
 import '../map/pick_location_page.dart'; // <-- IMPORT RESTAURADO
 
 class EditTaskPage extends StatefulWidget {
@@ -106,9 +107,7 @@ Future<void> _pickLocation() async {
   Future<void> _save() async {
     final title = _titleCtrl.text.trim();
     if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('O título é obrigatório')),
-      );
+      showAppSnackBar(context, 'O título é obrigatório');
       return;
     }
 
@@ -193,10 +192,8 @@ Future<void> _pickLocation() async {
             items: cats,
             selectedIds: _selectedCategoryIds,
             onChanged: (sel) {
-              if (sel.length > 3) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Máximo de 3 categorias.')),
-                );
+                if (sel.length > 3) {
+                showAppSnackBar(context, 'Máximo de 3 categorias.');
                 return;
               }
               setState(() {

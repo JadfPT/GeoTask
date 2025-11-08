@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../data/auth_store.dart';
 import '../../data/categories_store.dart';
 import '../../data/task_store.dart';
+import '../../utils/validators.dart';
+import '../../widgets/app_snackbar.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -34,16 +36,15 @@ class _RegisterPageState extends State<RegisterPage> {
       final tasks = context.read<TaskStore>();
       final username = _usernameCtrl.text.trim();
       final email = _emailCtrl.text.trim();
-      final emailRegex = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
-      if (!emailRegex.hasMatch(email)) {
+      if (!isValidEmail(email)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor introduz um email válido.')));
+          showAppSnackBar(context, 'Por favor introduz um email válido.');
         }
         return;
       }
-      if (username.isEmpty) {
+      if (!isNonEmpty(username)) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor introduz um username.')));
+          showAppSnackBar(context, 'Por favor introduz um username.');
         }
         return;
       }
@@ -56,9 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        showAppSnackBar(context, e.toString());
       }
     } finally {
       if (mounted) {

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../data/task_store.dart';
 import '../data/categories_store.dart';
 import '../models/task.dart';
+import 'category_chip.dart';
 
 class TaskCard extends StatelessWidget {
   final Task task;
@@ -75,21 +76,17 @@ class TaskCard extends StatelessWidget {
                     spacing: 8,       // ⇦ mais espaço horizontal
                     runSpacing: 8,    // ⇦ mais espaço vertical (adeus sobreposição)
                     children: [
-                      for (final cat in task.categoriesOrFallback)
-                        _ColoredChip(
-                          icon: Icons.sell_outlined,
-                          label: cat,
-                          color: catColorFor(cat),
-                        ),
+                        for (final cat in task.categoriesOrFallback)
+                          CategoryChip(label: cat, color: catColorFor(cat)),
                       if (task.due != null)
-                        _PlainChip(
+                        CategoryChip(
                           icon: Icons.access_time,
                           label:
                               '${task.due!.day.toString().padLeft(2, '0')}/${task.due!.month.toString().padLeft(2, '0')} '
                               '${task.due!.hour.toString().padLeft(2, '0')}:${task.due!.minute.toString().padLeft(2, '0')}',
                         ),
                       if (task.radiusMeters > 0)
-                        _PlainChip(
+                        CategoryChip(
                           icon: Icons.location_on_outlined,
                           label: '${task.radiusMeters.toStringAsFixed(0)} m',
                         ),
@@ -130,53 +127,4 @@ class TaskCard extends StatelessWidget {
   }
 }
 
-class _PlainChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _PlainChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final Color bg = cs.surfaceContainerHighest;
-    final Color fg = cs.onSurfaceVariant;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // ⇦ +altura
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 14, color: fg),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(color: fg)),
-      ]),
-    );
-  }
-}
-
-class _ColoredChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color? color;
-
-  const _ColoredChip({required this.icon, required this.label, this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    if (color == null) return _PlainChip(icon: icon, label: label);
-    final fg = Theme.of(context).colorScheme.onSurface;
-    final bg = color!.withValues(alpha: .18);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), // ⇦ +altura
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(12)),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 14, color: color),
-        const SizedBox(width: 6),
-        Text(label, style: TextStyle(color: fg)),
-      ]),
-    );
-  }
-}
+// CategoryChip is provided by lib/widgets/category_chip.dart
