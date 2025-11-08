@@ -33,10 +33,10 @@ class SettingsPage extends StatelessWidget {
           Card(
             child: ListTile(
               leading: const Icon(Icons.person_outline),
-              title: Text(context.watch<AuthStore>().currentUser?.email ?? 'Sem sessão'),
-              subtitle: context.watch<AuthStore>().currentUser == null
-                  ? const Text('Inicia sessão ou cria uma conta')
-                  : const Text('Sessão iniciada'),
+        title: Text(context.watch<AuthStore>().currentUser?.username ?? context.watch<AuthStore>().currentUser?.email ?? 'Sem sessão'),
+        subtitle: context.watch<AuthStore>().currentUser == null
+          ? const Text('Inicia sessão ou cria uma conta')
+          : Text(context.watch<AuthStore>().currentUser?.email ?? ''),
               trailing: Builder(builder: (ctx) {
                 final auth = ctx.watch<AuthStore>();
                 final user = auth.currentUser;
@@ -47,7 +47,6 @@ class SettingsPage extends StatelessWidget {
                   ]);
                 }
 
-                // Signed-in user
                 if (auth.isGuest) {
                   return Row(mainAxisSize: MainAxisSize.min, children: [
                     TextButton(onPressed: () => ctx.push('/register'), child: const Text('Criar conta')),
@@ -76,14 +75,63 @@ class SettingsPage extends StatelessWidget {
                   ]);
                 }
 
-                // Regular signed-in user: just logout
-                return TextButton(
-                  onPressed: () async {
+                // Regular signed-in user: show menu with email, logout, delete
+                return PopupMenuButton<String>(
+                  onSelected: (v) async {
                     final router = GoRouter.of(ctx);
-                    await ctx.read<AuthStore>().logout();
-                    router.go('/login');
+                    if (v == 'logout') {
+                      await ctx.read<AuthStore>().logout();
+                      router.go('/login');
+                    } else if (v == 'email') {
+                      final email = ctx.read<AuthStore>().currentUser?.email ?? '';
+                      showDialog<void>(context: ctx, builder: (dctx) => AlertDialog(title: const Text('Email associado'), content: Text(email), actions: [TextButton(onPressed: () => Navigator.of(dctx).pop(), child: const Text('OK'))]));
+                    } else if (v == 'delete') {
+                      final confirm = await showDialog<bool>(
+                        context: ctx,
+                        builder: (dctx) => AlertDialog(
+                          title: const Text('Apagar conta?'),
+                          content: const Text('Isto apagará permanentemente a sua conta e todos os dados associados. Continuar?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.of(dctx).pop(false), child: const Text('Cancelar')),
+                            ElevatedButton(onPressed: () => Navigator.of(dctx).pop(true), child: const Text('Apagar')),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        // ask for password
+                        final password = await showDialog<String?>(
+                          context: ctx,
+                          builder: (dctx) {
+                            final ctrl = TextEditingController();
+                            return AlertDialog(
+                              title: const Text('Confirme com a sua password'),
+                              content: TextField(controller: ctrl, decoration: const InputDecoration(labelText: 'Password'), obscureText: true),
+                              actions: [
+                                TextButton(onPressed: () => Navigator.of(dctx).pop(null), child: const Text('Cancelar')),
+                                ElevatedButton(onPressed: () => Navigator.of(dctx).pop(ctrl.text), child: const Text('Apagar')),
+                              ],
+                            );
+                          },
+                        );
+                        if (password != null) {
+                          final ok = await ctx.read<AuthStore>().deleteAccountWithPassword(password);
+                          if (ok) {
+                            if (ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Conta apagada')));
+                            }
+                            router.go('/login');
+                          } else {
+                            if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Password incorreta')));
+                          }
+                        }
+                      }
+                    }
                   },
-                  child: const Text('Sair'),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'email', child: Text('Ver email')), 
+                    PopupMenuItem(value: 'logout', child: Text('Sair')),
+                    PopupMenuItem(value: 'delete', child: Text('Apagar conta')),
+                  ],
                 );
               }),
             ),

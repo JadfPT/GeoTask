@@ -15,6 +15,7 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _emailCtrl = TextEditingController();
+  final _usernameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
 
@@ -31,6 +32,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final auth = context.read<AuthStore>();
       final cats = context.read<CategoriesStore>();
       final tasks = context.read<TaskStore>();
+      final username = _usernameCtrl.text.trim();
       final email = _emailCtrl.text.trim();
       final emailRegex = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
       if (!emailRegex.hasMatch(email)) {
@@ -39,7 +41,13 @@ class _RegisterPageState extends State<RegisterPage> {
         }
         return;
       }
-      final user = await auth.register(email, _passCtrl.text);
+      if (username.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Por favor introduz um username.')));
+        }
+        return;
+      }
+      final user = await auth.register(username, email, _passCtrl.text);
       // initialize user-scoped stores
       await cats.load(user.id);
       await tasks.loadFromDb(ownerId: user.id);
@@ -67,6 +75,11 @@ class _RegisterPageState extends State<RegisterPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            TextField(
+              controller: _usernameCtrl,
+              decoration: const InputDecoration(labelText: 'Username'),
+            ),
+            const SizedBox(height: 12),
             TextField(
               controller: _emailCtrl,
               decoration: const InputDecoration(labelText: 'Email'),

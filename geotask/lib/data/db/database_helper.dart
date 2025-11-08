@@ -8,7 +8,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static const _dbName = 'geotask.db';
-  static const _dbVersion = 2;
+  static const _dbVersion = 4;
 
   Database? _db;
 
@@ -56,8 +56,18 @@ class DatabaseHelper {
       CREATE TABLE users (
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
+        username TEXT,
         passwordHash TEXT NOT NULL,
         createdAt TEXT NOT NULL
+      )
+    ''');
+    await db.execute('''
+      CREATE TABLE categories (
+        id TEXT PRIMARY KEY,
+        ownerId TEXT NOT NULL,
+        name TEXT NOT NULL,
+        color INTEGER NOT NULL,
+        sortIndex INTEGER DEFAULT 0
       )
     ''');
   }
@@ -72,8 +82,30 @@ class DatabaseHelper {
         CREATE TABLE IF NOT EXISTS users (
           id TEXT PRIMARY KEY,
           email TEXT NOT NULL UNIQUE,
+          username TEXT,
           passwordHash TEXT NOT NULL,
           createdAt TEXT NOT NULL
+        )
+      ''');
+      oldVersion = 2;
+    }
+
+    if (oldVersion < 3) {
+      // add username column to users table
+      try {
+        await db.execute('ALTER TABLE users ADD COLUMN username TEXT');
+      } catch (_) {}
+    }
+
+    if (oldVersion < 4) {
+      // create categories table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+          id TEXT PRIMARY KEY,
+          ownerId TEXT NOT NULL,
+          name TEXT NOT NULL,
+          color INTEGER NOT NULL,
+          sortIndex INTEGER DEFAULT 0
         )
       ''');
     }
