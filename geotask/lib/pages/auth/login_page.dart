@@ -6,6 +6,7 @@ import '../../data/categories_store.dart';
 import '../../data/task_store.dart';
 import '../../widgets/app_snackbar.dart';
 import 'package:go_router/go_router.dart';
+import '../../utils/validators.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -17,7 +18,10 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+
   bool _loading = false;
+  bool _showPass = false;
 
   @override
   void dispose() {
@@ -40,13 +44,18 @@ class _LoginPageState extends State<LoginPage> {
         context.go('/dashboard');
       }
     } catch (e) {
+      final msg = e.toString();
       if (mounted) {
-        showAppSnackBar(context, e.toString());
+        if (msg.contains('User not found')) {
+          showAppSnackBar(context, 'Utilizador não encontrado. Confirma o email.');
+        } else if (msg.contains('Invalid credentials')) {
+          showAppSnackBar(context, 'Credenciais inválidas. Verifica o email e a password.');
+        } else {
+          showAppSnackBar(context, 'Erro: ${msg.split('\n').first}');
+        }
       }
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -59,17 +68,12 @@ class _LoginPageState extends State<LoginPage> {
       final user = await auth.createGuest();
       await cats.load(user.id);
       await tasks.loadFromDb(ownerId: user.id);
-      if (mounted) {
-        context.go('/dashboard');
-      }
+      if (mounted) context.go('/dashboard');
     } catch (e) {
-      if (mounted) {
-        showAppSnackBar(context, e.toString());
-      }
+      final msg = e.toString();
+      if (mounted) showAppSnackBar(context, 'Erro ao criar convidado: ${msg.split('\n').first}');
     } finally {
-      if (mounted) {
-        setState(() => _loading = false);
-      }
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -100,44 +104,84 @@ class _LoginPageState extends State<LoginPage> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        TextField(
-                          controller: _emailCtrl,
-                          decoration: const InputDecoration(labelText: 'Email'),
-                          keyboardType: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 12),
-                        TextField(
-                          controller: _passCtrl,
-                          decoration: const InputDecoration(labelText: 'Password'),
-                          obscureText: true,
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _loading ? null : _submit,
-                            child: _loading ? const SizedBox(width:20, height:20, child:CircularProgressIndicator(strokeWidth:2)) : const Text('Entrar'),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _emailCtrl,
+                            decoration: const InputDecoration(labelText: 'Email'),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Email é obrigatório.';
+                              if (!isValidEmail(v.trim())) return 'Email inválido.';
+                              return null;
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton(
-                            onPressed: _loading ? null : _guest,
-                            child: const Text('Continuar como convidado'),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _passCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              suffixIcon: IconButton(
+                                icon: Icon(_showPass ? Icons.visibility_off : Icons.visibility),
+                                onPressed: () => setState(() => _showPass = !_showPass),
+                              ),
+                            ),
+                            obscureText: !_showPass,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Password é obrigatória.';
+                              if (v.length < 4) return 'Password demasiado curta.';
+                              return null;
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text('Ainda não tens conta? '),
-                            TextButton(onPressed: () => context.push('/register'), child: const Text('Criar conta')),
-                          ],
-                        )
-                      ],
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                elevation: 4,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                              ),
+                              onPressed: _loading
+                                  ? null
+                                  : () {
+                                      if (_formKey.currentState?.validate() ?? false) _submit();
+                                    },
+                              child: _loading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Entrar'),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: theme.colorScheme.primary, width: 1.6),
+                                foregroundColor: theme.colorScheme.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                              ),
+                              onPressed: _loading ? null : _guest,
+                              child: const Text('Continuar como convidado'),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('Ainda não tens conta? '),
+                              TextButton(
+                                onPressed: () => context.push('/register'),
+                                style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary, textStyle: const TextStyle(fontWeight: FontWeight.w600)),
+                                child: const Text('Criar conta'),
+                              ),
+                            ],
+                          )
+                        ],
+                      ),
                     ),
                   ),
                 ),

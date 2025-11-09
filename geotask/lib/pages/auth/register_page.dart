@@ -19,16 +19,22 @@ class _RegisterPageState extends State<RegisterPage> {
   final _emailCtrl = TextEditingController();
   final _usernameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   bool _loading = false;
+  bool _showPass = false;
+  bool _showConfirm = false;
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _loading = true);
     try {
       final auth = context.read<AuthStore>();
@@ -36,19 +42,9 @@ class _RegisterPageState extends State<RegisterPage> {
       final tasks = context.read<TaskStore>();
       final username = _usernameCtrl.text.trim();
       final email = _emailCtrl.text.trim();
-      if (!isValidEmail(email)) {
-        if (mounted) {
-          showAppSnackBar(context, 'Por favor introduz um email válido.');
-        }
-        return;
-      }
-      if (!isNonEmpty(username)) {
-        if (mounted) {
-          showAppSnackBar(context, 'Por favor introduz um username.');
-        }
-        return;
-      }
-      final user = await auth.register(username, email, _passCtrl.text);
+      final pass = _passCtrl.text;
+
+      final user = await auth.register(username, email, pass);
       // initialize user-scoped stores
       await cats.load(user.id);
       await tasks.loadFromDb(ownerId: user.id);
@@ -56,8 +52,14 @@ class _RegisterPageState extends State<RegisterPage> {
         context.go('/dashboard');
       }
     } catch (e) {
+      final msg = e.toString();
       if (mounted) {
-        showAppSnackBar(context, e.toString());
+        if (msg.contains('UNIQUE constraint failed') || msg.toLowerCase().contains('unique')) {
+          showAppSnackBar(context, 'Já existe uma conta com esse email.');
+        } else {
+          // Show a shortened, single-line error to avoid huge DB dumps in UI
+          showAppSnackBar(context, 'Erro: ${msg.split('\n').first}');
+        }
       }
     } finally {
       if (mounted) {
@@ -68,33 +70,111 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Criar conta')),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _usernameCtrl,
-              decoration: const InputDecoration(labelText: 'Username'),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Image.asset('assets/icon.png', width: 120, height: 120),
+                ),
+                const SizedBox(height: 16),
+                Text('GeoTask', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Gerencia as tuas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                const SizedBox(height: 24),
+
+                Card(
+                  elevation: 6,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _usernameCtrl,
+                            decoration: const InputDecoration(labelText: 'Username'),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Username é obrigatório.';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _emailCtrl,
+                            decoration: const InputDecoration(labelText: 'Email'),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Email é obrigatório.';
+                              if (!isValidEmail(v.trim())) return 'Email inválido.';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _passCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Password',
+                              suffixIcon: IconButton(
+                                icon: Icon(_showPass ? Icons.visibility_off : Icons.visibility),
+                                onPressed: () => setState(() => _showPass = !_showPass),
+                              ),
+                            ),
+                            obscureText: !_showPass,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Password é obrigatória.';
+                              if (v.length < 4) return 'Password demasiado curta.';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _confirmCtrl,
+                            decoration: InputDecoration(
+                              labelText: 'Confirmar Password',
+                              suffixIcon: IconButton(
+                                icon: Icon(_showConfirm ? Icons.visibility_off : Icons.visibility),
+                                onPressed: () => setState(() => _showConfirm = !_showConfirm),
+                              ),
+                            ),
+                            obscureText: !_showConfirm,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Confirma a password.';
+                              if (v != _passCtrl.text) return 'As passwords não coincidem.';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                elevation: 4,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                              ),
+                              onPressed: _loading ? null : _submit,
+                              child: _loading ? const SizedBox(width:20, height:20, child:CircularProgressIndicator(strokeWidth:2)) : const Text('Registar'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _emailCtrl,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _passCtrl,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loading ? null : _submit,
-              child: _loading ? const CircularProgressIndicator() : const Text('Registar'),
-            ),
-          ],
+          ),
         ),
       ),
     );
