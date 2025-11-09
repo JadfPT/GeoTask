@@ -11,7 +11,8 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
 
   static const _dbName = 'geotask.db';
-  static const _dbVersion = 4;
+  // bumped to 5 to add `lastNotifiedAt` column to tasks
+  static const _dbVersion = 5;
 
   Database? _db;
 
@@ -61,6 +62,7 @@ class DatabaseHelper {
         radius REAL DEFAULT 150,
         category TEXT,
         categories TEXT,
+        lastNotifiedAt INTEGER,
         ownerId TEXT
       )
     ''');
@@ -122,6 +124,14 @@ class DatabaseHelper {
           sortIndex INTEGER DEFAULT 0
         )
       ''');
+    }
+
+    if (oldVersion < 5) {
+      // add lastNotifiedAt column to tasks to persist when a task was
+      // last notified. Stored as epoch milliseconds (INTEGER).
+      try {
+        await db.execute('ALTER TABLE tasks ADD COLUMN lastNotifiedAt INTEGER');
+      } catch (_) {}
     }
   }
 

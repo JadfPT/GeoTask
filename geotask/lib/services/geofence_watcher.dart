@@ -28,6 +28,8 @@ class GeofenceWatcher {
   StreamSubscription<Position>? _sub;
   DateTime _dayKey = DateTime.now();
   final Set<String> _notifiedToday = {};
+  // track previous inside/outside state for tasks to detect `enter` events
+  final Map<String, bool> _inside = {};
 
   /// Start listening to location changes and evaluate nearby tasks.
   ///
@@ -39,12 +41,41 @@ class GeofenceWatcher {
     await LocationService.ensurePermissions();
     await _sub?.cancel();
 
+    // Initialize current position without emitting enter notifications.
+    Position? pos;
+    try {
+      pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    } catch (_) {
+      // if current position fails, try last known — if both fail we'll still
+      // listen to the stream and set states on first update.
+      try {
+        pos = await Geolocator.getLastKnownPosition();
+      } catch (_) {
+        pos = null;
+      }
+    }
+
+    // Seed _inside map: mark which tasks are currently inside their radius
+    if (pos != null) {
+      for (final t in store.items) {
+        if (t.done || t.point == null || t.radiusMeters <= 0) {
+          _inside[t.id] = false;
+          continue;
+        }
+        final d = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude,
+          t.point!.latitude, t.point!.longitude,
+        );
+        _inside[t.id] = d <= t.radiusMeters;
+      }
+    }
+
     _sub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 25, // só reage quando te moves ~25m
       ),
-    ).listen((pos) => _onPosition(pos, store));
+    ).listen((p) => _onPosition(p, store));
   }
 
   /// Stop watching location updates.
@@ -66,17 +97,28 @@ class GeofenceWatcher {
         t.point!.latitude, t.point!.longitude,
       );
 
-      final entered = d <= t.radiusMeters;
-      final already = _notifiedToday.contains(t.id);
+      final currInside = d <= t.radiusMeters;
+      final prevInside = _inside[t.id] ?? false;
 
-      if (entered && !already) {
-        NotificationService.instance.show(
-          id: t.id.hashCode & 0x7fffffff,
-          title: 'Estás perto: ${t.title}',
-          body: t.note == null ? 'Dentro do raio desta tarefa.' : t.note!,
-        );
-        _notifiedToday.add(t.id); // uma vez por dia
+      // only trigger when transitioning from outside -> inside
+      if (!prevInside && currInside) {
+        // daily dedupe: don't send more than one per day
+        final already = _notifiedToday.contains(t.id);
+        if (!already) {
+          NotificationService.instance.show(
+            id: t.id.hashCode & 0x7fffffff,
+            title: 'Estás perto: ${t.title}',
+            body: t.note == null ? 'Dentro do raio desta tarefa.' : t.note!,
+          );
+          _notifiedToday.add(t.id); // uma vez por dia
+
+          // persist last notified timestamp via the store (ignore errors)
+          store.markTaskNotified(t.id, DateTime.now()).catchError((_) {});
+        }
       }
+
+      // update inside state for the next event
+      _inside[t.id] = currInside;
     }
   }
 

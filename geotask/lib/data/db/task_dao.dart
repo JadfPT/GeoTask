@@ -81,6 +81,7 @@ class TaskDao {
       'category': t.category,
       'categories': t.categories == null ? null : jsonEncode(t.categories),
       'ownerId': t.ownerId,
+      'lastNotifiedAt': t.lastNotifiedAt?.millisecondsSinceEpoch,
     };
   }
 
@@ -115,6 +116,9 @@ class TaskDao {
       category: row['category'] as String?,
       categories: cats,
       ownerId: row['ownerId'] as String?,
+      lastNotifiedAt: row['lastNotifiedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(row['lastNotifiedAt'] as int)
+          : null,
     );
   }
 }

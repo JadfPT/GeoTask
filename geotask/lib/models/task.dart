@@ -18,6 +18,8 @@ class Task {
   final List<String>? categories;
   // Owner user id (optional)
   final String? ownerId;
+  // Timestamp when the task was last used to send a notification (epoch ms)
+  final DateTime? lastNotifiedAt;
 
   const Task({
     required this.id,
@@ -30,6 +32,7 @@ class Task {
     this.category,   // legacy
     this.categories, // novo
     this.ownerId,
+    this.lastNotifiedAt,
   });
 
   Task copyWith({
@@ -43,6 +46,7 @@ class Task {
     String? category,
     List<String>? categories,
     String? ownerId,
+    DateTime? lastNotifiedAt,
   }) {
     return Task(
       id: id ?? this.id,
@@ -55,6 +59,7 @@ class Task {
       category: category ?? this.category,
       categories: categories ?? this.categories,
       ownerId: ownerId ?? this.ownerId,
+      lastNotifiedAt: lastNotifiedAt ?? this.lastNotifiedAt,
     );
   }
 
@@ -78,6 +83,7 @@ class Task {
         'category': category,     // legacy
         'categories': categories, // novo
         'ownerId': ownerId,
+        'lastNotifiedAt': lastNotifiedAt?.toIso8601String(),
       };
 
   factory Task.fromJson(Map<String, dynamic> json) {
@@ -108,6 +114,9 @@ class Task {
       category: json['category'] as String?, // legacy
       categories: cats,                       // novo
       ownerId: json['ownerId'] as String?,
+      lastNotifiedAt: json['lastNotifiedAt'] != null
+          ? DateTime.tryParse(json['lastNotifiedAt'])
+          : null,
     );
   }
 }

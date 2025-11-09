@@ -18,7 +18,6 @@ class NotificationController {
 
   TaskStore? _store;
   Timer? _timer;
-  final Set<String> _notifiedDue = <String>{};
 
   /// Attach to a TaskStore. This starts a periodic timer and the geofence
   /// watcher. Re-attaching with the same store is a no-op.
@@ -47,7 +46,8 @@ class NotificationController {
     }
     // stop geofence watcher
     GeofenceWatcher.instance.stop();
-    _notifiedDue.clear();
+    // persisted per-task notification timestamps are used; nothing to
+    // clear here.
   }
 
   void _onTasksChanged() {
@@ -55,8 +55,8 @@ class NotificationController {
     _checkDue();
     // Also clear notifications for tasks that are no longer present/done
     if (_store == null) return;
-    final ids = _store!.items.map((t) => t.id).toSet();
-    _notifiedDue.removeWhere((id) => !ids.contains(id));
+    // No in-memory dedupe set: the per-task `lastNotifiedAt` persisted value
+    // in the database will be used to avoid re-sending notifications.
   }
 
   Future<void> _checkDue() async {
@@ -67,8 +67,15 @@ class NotificationController {
       if (t.done) continue;
       final id = t.id;
       if (t.due == null) continue;
-      // already notified
-      if (_notifiedDue.contains(id)) continue;
+      // skip if we've already recorded a notification after (or at) the
+      // due time. We persist lastNotifiedAt per task so that app restarts
+      // don't re-send the same overdue notification repeatedly.
+      if (t.lastNotifiedAt != null) {
+        // if lastNotifiedAt is at/after the due time, assume we've already
+        // sent the due notification
+        if (!t.lastNotifiedAt!.isBefore(t.due!)) continue;
+      }
+
       // notify if due time passed
       if (!t.due!.isAfter(now)) {
         final nid = _notifIdForTask(id);
@@ -78,8 +85,9 @@ class NotificationController {
             title: 'Tarefa: ${t.title}',
             body: t.note ?? 'Hora de executar a tarefa',
           );
+          // persist that we've notified at now
+          await s.markTaskNotified(id, DateTime.now());
         } catch (_) {}
-        _notifiedDue.add(id);
       }
     }
   }

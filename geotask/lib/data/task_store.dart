@@ -81,4 +81,17 @@ class TaskStore extends ChangeNotifier {
       ..addAll(items);
     notifyListeners();
   }
+
+  /// Mark a task as having sent a notification at [when]. Persists the change
+  /// and updates the in-memory item. Useful to deduplicate notifications
+  /// across app restarts.
+  Future<void> markTaskNotified(String id, DateTime when) async {
+    final i = _items.indexWhere((e) => e.id == id);
+    if (i < 0) return;
+    final t = _items[i];
+    final updated = t.copyWith(lastNotifiedAt: when);
+    await TaskDao.instance.update(updated);
+    _items[i] = updated;
+    notifyListeners();
+  }
 }

@@ -55,6 +55,11 @@ class NotificationService {
       // Android 13+: runtime permission
       await Permission.notification.request();
     }
+    // Initialize plugin with default platform settings so callbacks work and
+    // Android uses a small icon. Use the app launcher icon as default.
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosInit = DarwinInitializationSettings();
+    await _plugin.initialize(const InitializationSettings(android: androidInit, iOS: iosInit));
   }
 
   /// Show a simple local notification.
@@ -73,6 +78,7 @@ class NotificationService {
         'GeoTasks Alerts',
         priority: Priority.high,
         importance: Importance.high,
+        icon: '@mipmap/ic_launcher',
       ),
       iOS: DarwinNotificationDetails(),
     );
