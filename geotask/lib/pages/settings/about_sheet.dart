@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
-void showAboutGeoTasks(BuildContext context) {
+void showAboutGeoTasks(BuildContext context, {VoidCallback? onTitleTap}) {
   showModalBottomSheet(
     context: context,
     showDragHandle: true,
@@ -18,7 +18,11 @@ void showAboutGeoTasks(BuildContext context) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('GeoTasks', style: Theme.of(context).textTheme.headlineSmall),
+              // Title is tappable to support a hidden developer easter-egg.
+              GestureDetector(
+                onTap: onTitleTap,
+                child: Text('GeoTasks', style: Theme.of(context).textTheme.headlineSmall),
+              ),
               const SizedBox(height: 6),
               Text(
                 'Gestor de tarefas com geolocalização. '
