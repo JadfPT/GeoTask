@@ -10,7 +10,10 @@ import '../../utils/validators.dart';
 import 'package:go_router/go_router.dart';
 
 class ResetPasswordPage extends StatefulWidget {
-  const ResetPasswordPage({super.key});
+  final String? initialEmail;
+  final bool autoSend;
+
+  const ResetPasswordPage({super.key, this.initialEmail, this.autoSend = false});
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -44,6 +47,20 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     _confirmCtrl.dispose();
     _resendTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // If the page was given an initial email, prefill and optionally auto-send the code.
+    final widgetEmail = widget.initialEmail;
+    if (widgetEmail != null && widgetEmail.isNotEmpty) {
+      _emailCtrl.text = widgetEmail;
+      if (widget.autoSend) {
+        // delay slightly to allow build to complete
+        WidgetsBinding.instance.addPostFrameCallback((_) => _sendCode());
+      }
+    }
   }
 
   Future<void> _sendCode() async {

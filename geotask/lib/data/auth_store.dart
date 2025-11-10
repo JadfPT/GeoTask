@@ -189,4 +189,16 @@ class AuthStore extends ChangeNotifier {
       }
     }
   }
+
+  /// Update username for the given user id and refresh in-memory user if it matches.
+  Future<void> updateUsername(String id, String username) async {
+    await UserDao.instance.updateUsername(id, username);
+    if (_currentUser != null && _currentUser!.id == id) {
+      final refreshed = await UserDao.instance.getById(id);
+      if (refreshed != null) {
+        _currentUser = refreshed;
+        notifyListeners();
+      }
+    }
+  }
 }

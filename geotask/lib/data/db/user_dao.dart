@@ -36,6 +36,11 @@ class UserDao {
     await db.update('users', {'passwordHash': newHash}, where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<void> updateUsername(String id, String username) async {
+    final db = await _db;
+    await db.update('users', {'username': username}, where: 'id = ?', whereArgs: [id]);
+  }
+
   Future<void> deleteUser(String id) async {
     final db = await _db;
     await db.delete('users', where: 'id = ?', whereArgs: [id]);

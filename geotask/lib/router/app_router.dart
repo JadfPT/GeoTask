@@ -15,6 +15,7 @@ import '../models/task.dart';
 import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
 import '../pages/auth/reset_password_page.dart';
+import '../pages/settings/edit_user_page.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -148,7 +149,19 @@ class AppRouter {
             path: '/reset-password',
             name: 'resetPassword',
             parentNavigatorKey: rootNavigatorKey,
-            builder: (context, state) => const ResetPasswordPage(),
+            builder: (context, state) {
+              // allow pre-filling email and auto-send via query params
+              final qp = state.uri.queryParameters;
+              final email = qp['email'];
+              final autoSend = qp['autoSend'] == '1' || qp['autoSend'] == 'true';
+              return ResetPasswordPage(initialEmail: email, autoSend: autoSend);
+            },
+          ),
+          GoRoute(
+            path: '/account/edit',
+            name: 'editAccount',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, state) => const EditUserPage(),
           ),
           GoRoute(
             path: '/register',

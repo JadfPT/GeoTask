@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
+import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 // notification_service is used by dev tools; keep import in dev_tools.dart instead
 import '../../data/auth_store.dart';
@@ -49,6 +50,18 @@ class _SettingsPageState extends State<SettingsPage> {
         _loadedForUserId = userId;
       });
     } catch (_) {}
+  }
+
+  Future<String?> _loadAvatarPathForUser(String userId) async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final key = 'avatar_$userId';
+      final path = sp.getString(key);
+      if (path == null) return null;
+      final f = File(path);
+      if (await f.exists()) return path;
+    } catch (_) {}
+    return null;
   }
 
   Future<void> _setDevUnlocked(bool v) async {
@@ -118,9 +131,30 @@ class _SettingsPageState extends State<SettingsPage> {
                 final parts = name.split(RegExp(r'\s+'));
                 initials = parts.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').take(2).join();
               }
-              return CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.16 * 255).round()),
-                child: initials.isEmpty ? const Icon(Icons.person_outline, color: Colors.white) : Text(initials, style: const TextStyle(color: Colors.white)),
+
+              if (user == null) {
+                return CircleAvatar(
+                  backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.16 * 255).round()),
+                  child: initials.isEmpty ? const Icon(Icons.person_outline, color: Colors.white) : Text(initials, style: const TextStyle(color: Colors.white)),
+                );
+              }
+
+              return FutureBuilder<String?>(
+                future: _loadAvatarPathForUser(user.id),
+                builder: (fbCtx, snap) {
+                  final path = snap.data;
+                  if (snap.connectionState == ConnectionState.done && path != null) {
+                    return CircleAvatar(
+                      backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.16 * 255).round()),
+                      backgroundImage: FileImage(File(path)),
+                    );
+                  }
+                  // fallback to initials while loading or if no avatar
+                  return CircleAvatar(
+                    backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.16 * 255).round()),
+                    child: initials.isEmpty ? const Icon(Icons.person_outline, color: Colors.white) : Text(initials, style: const TextStyle(color: Colors.white)),
+                  );
+                },
               );
             }),
             title: Builder(builder: (ctx) {
@@ -276,33 +310,19 @@ class _SettingsPageState extends State<SettingsPage> {
                 ] else ...[
                   Row(children: [
                     Expanded(child: OutlinedButton(onPressed: () async {
-                      // logout
+                      // logout (rename shown to user as 'Terminar sessão')
                       final router = GoRouter.of(rootContext);
                       await auth.logout();
                       router.go('/login');
-                    }, child: const Text('Sair'))),
+                    }, child: const Text('Terminar sessão'))),
                     const SizedBox(width: 8),
                     Expanded(child: FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
-                      onPressed: () async {
-                      final router = GoRouter.of(rootContext);
-                      final messenger = ScaffoldMessenger.of(rootContext);
-                      // ignore: use_build_context_synchronously
-                      final confirm = await showConfirmDialog(rootContext, title: 'Apagar conta?', content: 'Isto apagará permanentemente a sua conta e todos os dados associados. Continuar?', confirmLabel: 'Apagar', cancelLabel: 'Cancelar');
-                      if (confirm == true) {
-                        // ignore: use_build_context_synchronously
-                        final password = await showPasswordPrompt(rootContext, title: 'Confirme com a sua password', label: 'Password', confirmLabel: 'Apagar');
-                        if (password != null) {
-                          final ok = await auth.deleteAccountWithPassword(password);
-                          if (ok) {
-                            router.go('/login');
-                          } else {
-                            messenger.showSnackBar(const SnackBar(content: Text('Password incorreta')));
-                          }
-                        }
-                      }
+                      onPressed: () {
+                        // open edit account page where the user can change username, password or delete account
+                        Navigator.of(ctx).pop();
+                        rootContext.push('/account/edit');
                       },
-                      child: const Text('Apagar conta'),
+                      child: const Text('Editar conta'),
                     )),
                   ])
                 ],
