@@ -275,7 +275,38 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(radius: 28, backgroundColor: Theme.of(ctx).colorScheme.primary.withAlpha((0.16 * 255).round()), child: const Icon(Icons.person_outline, color: Colors.white)),
+                    // show persisted avatar if available, otherwise fallback to initials/icon
+                    Builder(builder: (avCtx) {
+                      if (user == null) {
+                        return CircleAvatar(radius: 28, backgroundColor: Theme.of(avCtx).colorScheme.primary.withAlpha((0.16 * 255).round()), child: const Icon(Icons.person_outline, color: Colors.white));
+                      }
+
+                      return FutureBuilder<String?>(
+                        future: _loadAvatarPathForUser(user.id),
+                        builder: (fbCtx, snap) {
+                          final path = snap.data;
+                          if (snap.connectionState == ConnectionState.done && path != null) {
+                            return CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Theme.of(avCtx).colorScheme.primary.withAlpha((0.16 * 255).round()),
+                              backgroundImage: FileImage(File(path)),
+                            );
+                          }
+
+                          // fallback to initials while loading or if no avatar
+                          String initials = '';
+                          final name = user.username ?? user.email;
+                          final parts = name.split(RegExp(r'\s+'));
+                          initials = parts.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').take(2).join();
+
+                          return CircleAvatar(
+                            radius: 28,
+                            backgroundColor: Theme.of(avCtx).colorScheme.primary.withAlpha((0.16 * 255).round()),
+                            child: initials.isEmpty ? const Icon(Icons.person_outline, color: Colors.white) : Text(initials, style: const TextStyle(color: Colors.white)),
+                          );
+                        },
+                      );
+                    }),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
