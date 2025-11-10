@@ -55,7 +55,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final msg = e.toString();
       if (mounted) {
         if (msg.contains('UNIQUE constraint failed') || msg.toLowerCase().contains('unique')) {
-          showAppSnackBar(context, 'Já existe uma conta com esse email.');
+          showAppSnackBar(context, 'Já existe uma conta com este email.');
         } else {
           // Show a shortened, single-line error to avoid huge DB dumps in UI
           showAppSnackBar(context, 'Erro: ${msg.split('\n').first}');
@@ -87,7 +87,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 const SizedBox(height: 16),
                 Text('GeoTask', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Gerencia as tuas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                Text('Gerencie as suas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
                 const SizedBox(height: 24),
 
                 Card(

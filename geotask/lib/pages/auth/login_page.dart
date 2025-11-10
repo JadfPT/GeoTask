@@ -47,9 +47,9 @@ class _LoginPageState extends State<LoginPage> {
       final msg = e.toString();
       if (mounted) {
         if (msg.contains('User not found')) {
-          showAppSnackBar(context, 'Utilizador não encontrado. Confirma o email.');
+          showAppSnackBar(context, 'Utilizador não encontrado.');
         } else if (msg.contains('Invalid credentials')) {
-          showAppSnackBar(context, 'Credenciais inválidas. Verifica o email e a password.');
+          showAppSnackBar(context, 'Credenciais inválidas. Verifique o email e a password.');
         } else {
           showAppSnackBar(context, 'Erro: ${msg.split('\n').first}');
         }
@@ -96,7 +96,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 16),
                 Text('GeoTask', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Gerencia as tuas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                Text('Gerencie as suas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
                 const SizedBox(height: 24),
 
                 Card(
@@ -181,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Text('Ainda não tens conta? '),
+                              const Text('Ainda não tem conta? '),
                               TextButton(
                                 onPressed: () => context.push('/register'),
                                 style: TextButton.styleFrom(foregroundColor: theme.colorScheme.primary, textStyle: const TextStyle(fontWeight: FontWeight.w600)),
