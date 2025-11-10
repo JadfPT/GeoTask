@@ -126,12 +126,14 @@ class _TasksPageState extends State<TasksPage> {
   Future<void> _handleDismissed(dynamic t) async {
     final store = context.read<TaskStore>();
     final scaffold = ScaffoldMessenger.of(context);
+    final cs = Theme.of(context).colorScheme;
     // remove and offer undo
     await store.remove(t.id);
     scaffold.clearSnackBars();
     scaffold.showSnackBar(SnackBar(
-      content: const Text('Tarefa eliminada'),
-      action: SnackBarAction(label: 'Anular', onPressed: () async {
+      backgroundColor: cs.surface,
+      content: Text('Tarefa eliminada', style: TextStyle(color: cs.onSurface)),
+      action: SnackBarAction(label: 'Anular', textColor: cs.primary, onPressed: () async {
         // re-insert task (TaskDao.insert uses replace) to undo
         await store.add(t);
       }),
