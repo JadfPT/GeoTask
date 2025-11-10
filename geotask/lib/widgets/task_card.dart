@@ -85,7 +85,10 @@ class TaskCard extends StatelessWidget {
                               '${task.due!.day.toString().padLeft(2, '0')}/${task.due!.month.toString().padLeft(2, '0')} '
                               '${task.due!.hour.toString().padLeft(2, '0')}:${task.due!.minute.toString().padLeft(2, '0')}',
                         ),
-                      if (task.radiusMeters > 0)
+                      // Only show a radius badge when the task has a geo point
+                      // associated. Tasks without a location should not display
+                      // the default radius value (which defaults to 150).
+                      if (task.point != null && task.radiusMeters > 0)
                         CategoryChip(
                           icon: Icons.location_on_outlined,
                           label: '${task.radiusMeters.toStringAsFixed(0)} m',
