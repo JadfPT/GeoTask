@@ -14,6 +14,7 @@ import '../pages/settings/categories_page.dart';
 import '../models/task.dart';
 import '../pages/auth/login_page.dart';
 import '../pages/auth/register_page.dart';
+import '../pages/auth/reset_password_page.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> rootNavigatorKey =
@@ -142,6 +143,12 @@ class AppRouter {
             name: 'login',
             parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => LoginPage(),
+          ),
+          GoRoute(
+            path: '/reset-password',
+            name: 'resetPassword',
+            parentNavigatorKey: rootNavigatorKey,
+            builder: (context, state) => const ResetPasswordPage(),
           ),
           GoRoute(
             path: '/register',

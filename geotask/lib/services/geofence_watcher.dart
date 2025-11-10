@@ -44,7 +44,7 @@ class GeofenceWatcher {
     // Initialize current position without emitting enter notifications.
     Position? pos;
     try {
-      pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
     } catch (_) {
       // if current position fails, try last known — if both fail we'll still
       // listen to the stream and set states on first update.

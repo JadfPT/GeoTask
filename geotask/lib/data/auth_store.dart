@@ -170,4 +170,23 @@ class AuthStore extends ChangeNotifier {
       await UserDao.instance.deleteUser(guestId);
     } catch (_) {}
   }
+
+  /// Reset the password for an existing account identified by [email].
+  ///
+  /// Throws if user not found. Updates the stored hash and refreshes the
+  /// in-memory current user if it matches the changed account.
+  Future<void> resetPassword(String email, String newPassword) async {
+    final rowUser = await UserDao.instance.getByEmail(email);
+    if (rowUser == null) throw Exception('User not found');
+    final newHash = hashPasswordPbkdf2(newPassword);
+    await UserDao.instance.updatePasswordHash(rowUser.id, newHash);
+    // if current user matches, reload it so passwordHash reflects change
+    if (_currentUser != null && _currentUser!.id == rowUser.id) {
+      final refreshed = await UserDao.instance.getById(rowUser.id);
+      if (refreshed != null) {
+        _currentUser = refreshed;
+        notifyListeners();
+      }
+    }
+  }
 }

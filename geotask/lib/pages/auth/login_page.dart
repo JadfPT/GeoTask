@@ -135,6 +135,15 @@ class _LoginPageState extends State<LoginPage> {
                               return null;
                             },
                           ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: _loading ? null : () => context.push('/reset-password'),
+                              style: TextButton.styleFrom(textStyle: const TextStyle(fontWeight: FontWeight.w600)),
+                              child: const Text('Esqueci a palavra-passe?'),
+                            ),
+                          ),
                           const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,

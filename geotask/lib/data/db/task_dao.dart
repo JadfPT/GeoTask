@@ -59,6 +59,13 @@ class TaskDao {
     await db.delete('tasks', where: 'ownerId = ?', whereArgs: [ownerId]);
   }
 
+  /// Clear the lastNotifiedAt timestamp for all tasks belonging to [ownerId].
+  /// This is useful for resetting notification state during testing/dev.
+  Future<void> clearLastNotifiedForOwner(String ownerId) async {
+    final db = await _db;
+    await db.update('tasks', {'lastNotifiedAt': null}, where: 'ownerId = ?', whereArgs: [ownerId]);
+  }
+
   /// Move tasks from [oldOwnerId] to [newOwnerId]. Used when migrating guest
   /// data into a newly registered user account.
   Future<void> updateOwner(String oldOwnerId, String newOwnerId) async {
