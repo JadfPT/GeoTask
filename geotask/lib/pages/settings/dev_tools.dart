@@ -36,7 +36,7 @@ class DevOptions extends StatelessWidget {
         // Test notification
         AppCard(
           leading: const Icon(Icons.notifications_active),
-          title: const Text('Testar notificação (dev)'),
+          title: const Text('Testar notificações'),
           subtitle: const Text('Envia uma notificação de teste ao sistema'),
             onTap: () async {
             final status = await Permission.notification.status;
@@ -49,7 +49,7 @@ class DevOptions extends StatelessWidget {
             }
             try {
               await NotificationService.instance.show(id: 999999, title: 'Teste GeoTask', body: 'Isto é uma notificação de teste');
-              if (context.mounted) showAppSnackBar(context, 'Notificação enviada (verifica a área de sistema)');
+              if (context.mounted) showAppSnackBar(context, 'Notificação enviada');
             } catch (e) {
               if (context.mounted) showAppSnackBar(context, 'Erro ao enviar notificação: ${e.toString()}');
             }
@@ -61,7 +61,7 @@ class DevOptions extends StatelessWidget {
         AppCard(
           leading: const Icon(Icons.delete_forever),
           title: const Text('Limpar dados da conta'),
-          subtitle: const Text('Apaga todas as tarefas e categorias e restaura categorias padrão'),
+          subtitle: const Text('Apaga todas as tarefas e restaura categorias padrão'),
           onTap: () async {
             final userId = context.read<AuthStore>().currentUser?.id;
             if (userId == null) return;
@@ -93,14 +93,14 @@ class DevOptions extends StatelessWidget {
         // Reset notifications
         AppCard(
           leading: const Icon(Icons.notifications_off),
-          title: const Text('Reset notifications'),
+          title: const Text('Reset notificações'),
           subtitle: const Text('Limpa os registos de notificações para esta conta'),
           onTap: () async {
             final userId = context.read<AuthStore>().currentUser?.id;
             if (userId == null) return;
             final tasks = context.read<TaskStore>();
             final confirm = await showConfirmDialog(context,
-              title: 'Reset notifications?',
+              title: 'Reset notificações?',
               content: 'Isto permitirá que todas as tarefas voltem a notificar quando as condições ocorrerem. Continuar?',
               confirmLabel: 'Reset',
               cancelLabel: 'Cancelar',
@@ -120,7 +120,7 @@ class DevOptions extends StatelessWidget {
         // Seed demo data
         AppCard(
           leading: const Icon(Icons.auto_awesome),
-          title: const Text('Seed demo data'),
+          title: const Text('Criar tarefas de exemplo'),
           subtitle: const Text('Adiciona tarefas de exemplo para testes'),
           onTap: () async {
             final userId = context.read<AuthStore>().currentUser?.id;
@@ -155,8 +155,8 @@ class DevOptions extends StatelessWidget {
         // Simulate location
         AppCard(
           leading: const Icon(Icons.my_location),
-          title: const Text('Simulate location'),
-          subtitle: const Text('Simula a posição para testar geofence notifications'),
+          title: const Text('Simular localização'),
+          subtitle: const Text('Simula a posição para testar notificações de geofence'),
           onTap: () async {
             final userId = context.read<AuthStore>().currentUser?.id;
             if (userId == null) return;
@@ -167,7 +167,7 @@ class DevOptions extends StatelessWidget {
             final formKey = GlobalKey<FormState>();
             final ok = await showDialog<bool>(context: context, builder: (ctx) {
               return AlertDialog(
-                title: const Text('Simulate location'),
+                title: const Text('Simular localização'),
                 content: Form(
                   key: formKey,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
