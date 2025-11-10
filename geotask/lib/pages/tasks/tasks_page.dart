@@ -64,6 +64,11 @@ class _TasksPageState extends State<TasksPage> {
     final store = context.watch<TaskStore>();
     final items = store.items;
 
+    // PopScope is the newer API, but it requires Flutter >= 3.12 in the SDK.
+    // Keep using WillPopScope for compatibility and locally ignore the
+    // deprecation to avoid analyzer warnings until the project SDK is
+    // upgraded. Replace with PopScope when the environment supports it.
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: _confirmLeaveIfDirty,
       child: Scaffold(
