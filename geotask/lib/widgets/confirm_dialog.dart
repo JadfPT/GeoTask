@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/*
+  Ficheiro: confirm_dialog.dart
+  Propósito: Diálogos utilitários (confirmação, prompt de password, informação).
+  - Fornece funções simples para reutilizar em várias páginas.
+*/
 
 /// Simple helpers to show common dialogs used across the app.
 

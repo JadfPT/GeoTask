@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'app_snackbar.dart';
 import '../models/category.dart';
+/*
+  Ficheiro: categories_multi_selector.dart
+  Propósito: Widget para seleccionar múltiplas categorias com limite configurável.
+  - Mostra chips coloridos e controla limite/preview.
+*/
 
 /// Multi-seletor de categorias
 /// - Mostra cores de cada categoria

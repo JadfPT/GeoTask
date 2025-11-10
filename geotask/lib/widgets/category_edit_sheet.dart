@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'palette_selector.dart';
+/*
+  Ficheiro: category_edit_sheet.dart
+  Propósito: Folha (bottom sheet) para criar/editar uma categoria.
+  - Retorna um `CategoryEditResult` com nome e cor quando o utilizador guarda.
+*/
 
 /// Bottom sheet widget used to edit or create a category.
 ///

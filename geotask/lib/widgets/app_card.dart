@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/*
+  Ficheiro: app_card.dart
+  Propósito: Wrapper pequeno que combina um [Card] com um [ListTile] para
+  linhas consistentes na UI (definições e listas simples).
+*/
 
 /// A small wrapper that combines a [Card] and a [ListTile] with consistent
 /// padding, elevation and shape. Use when you want the app's default card

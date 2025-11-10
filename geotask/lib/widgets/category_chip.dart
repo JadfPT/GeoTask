@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/*
+  Ficheiro: category_chip.dart
+  Propósito: Chip reutilizável para apresentar uma categoria com cor/ícone.
+  - Mostra variantes com e sem cor, garantindo contraste do texto.
+*/
 
 /// Reusable category/label chip used across the app.
 ///

@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/*
+  Ficheiro: app_snackbar.dart
+  Propósito: Helpers para mostrar SnackBars de forma consistente na aplicação.
+  - Use `showAppSnackBar(context, 'texto')` para mensagens curtas.
+*/
 
 /// Simple helper to show SnackBars consistently across the app.
 ///

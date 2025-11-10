@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/*
+  Ficheiro: empty_hint.dart
+  Propósito: Componente para estados vazios (mensagem + acção opcional).
+  - Usado em listas sem elementos para guiar o utilizador a criar conteúdo.
+*/
 
 /// Reusable empty hint used across pages to show a small illustration and
 /// explanatory text when a list is empty.
