@@ -121,7 +121,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 // Logo + title like login page
                 ClipRRect(
                   borderRadius: BorderRadius.circular(24),
-                  child: Image.asset('assets/icon.png', width: 96, height: 96),
+                  child: Image.asset('assets/icon.png', width: 120, height: 120),
                 ),
                 const SizedBox(height: 12),
                 Text('GeoTask', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
