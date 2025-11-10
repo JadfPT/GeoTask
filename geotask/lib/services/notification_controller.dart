@@ -3,6 +3,7 @@ import 'dart:async';
 import '../data/task_store.dart';
 import 'notification_service.dart';
 import 'geofence_watcher.dart';
+import 'foreground_service.dart';
 
 /// NotificationController orchestrates time-based and location-based
 /// notifications for the currently attached [TaskStore].
@@ -28,6 +29,10 @@ class NotificationController {
     _store!.addListener(_onTasksChanged);
     // start geofence watcher which will trigger notifications on enter
     GeofenceWatcher.instance.start(store);
+    // start a foreground service so the app is more likely to keep receiving
+    // location updates while backgrounded. This is a lightweight persistent
+    // notification that keeps the process alive on most Android devices.
+    ForegroundService.start(title: 'GeoTask', content: 'A vigiar localização');
     // periodic check for due tasks every 30 seconds
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => _checkDue());
     // run initial check immediately
@@ -46,6 +51,8 @@ class NotificationController {
     }
     // stop geofence watcher
     GeofenceWatcher.instance.stop();
+  // stop foreground service if running
+  ForegroundService.stop();
     // persisted per-task notification timestamps are used; nothing to
     // clear here.
   }

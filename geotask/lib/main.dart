@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'bootstrap/app_providers.dart';
 import 'app.dart';
 import 'services/notification_service.dart';
+import 'services/foreground_service.dart';
 
 /// Entrypoint da aplicação.
 ///
@@ -9,8 +10,10 @@ import 'services/notification_service.dart';
 /// a árvore de providers em torno do widget principal [GeoTasksApp].
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize local notifications early so channels/permissions are ready
+  // Initialize foreground service helper first (idempotent) then
+  // initialize local notifications so channels/permissions are ready
   // before any runtime code may trigger notifications.
+  await ForegroundService.init();
   await NotificationService.instance.init();
   runApp(const AppProviders(child: GeoTasksApp()));
 }
