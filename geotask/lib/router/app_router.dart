@@ -33,7 +33,7 @@ class AppRouter {
             final currentUser = auth.currentUser;
             final isLoaded = auth.isLoaded;
 
-            final loggingPaths = {'/login', '/register'};
+            final loggingPaths = {'/login', '/register', '/reset-password'};
 
             // If auth finished loading and there's a user:
             // - allow guests to access /register (they'll migrate data there)
