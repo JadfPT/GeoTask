@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../data/task_store.dart';
+import '../../data/auth_store.dart';
 import '../../widgets/task_card.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/app_snackbar.dart';
@@ -14,12 +17,56 @@ class TasksPage extends StatefulWidget {
 }
 
 class _TasksPageState extends State<TasksPage> {
+  List<Map<String, dynamic>>? _initialSnapshot;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Capture initial snapshot of tasks to detect unsaved changes
+    if (_initialSnapshot == null) {
+      final store = context.read<TaskStore>();
+      _initialSnapshot = store.items.map((t) => t.toJson()).toList();
+    }
+  }
+
+  bool _isDirty(TaskStore store) {
+    final curr = store.items.map((t) => t.toJson()).toList();
+    return jsonEncode(curr) != jsonEncode(_initialSnapshot);
+  }
+
+  Future<bool> _confirmLeaveIfDirty() async {
+    final store = context.read<TaskStore>();
+    if (_initialSnapshot == null) return true;
+    if (!_isDirty(store)) return true;
+
+    // Capture ownerId before awaiting to avoid using BuildContext after an async gap
+    final ownerId = context.read<AuthStore>().currentUser?.id;
+
+    final choice = await showConfirmDialog(context,
+      title: 'Guardar alterações?',
+      content: 'Guardar as alterações feitas às tarefas ou reverter para a versão anterior?',
+      confirmLabel: 'Guardar',
+      cancelLabel: 'Reverter',
+    );
+
+    if (choice == true) {
+      // Changes are already persisted per-operation; refresh snapshot and allow pop
+      _initialSnapshot = store.items.map((t) => t.toJson()).toList();
+      return true;
+    } else {
+      // Revert: reload from DB to discard any in-memory changes
+      await store.loadFromDb(ownerId: ownerId);
+      return true;
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final store = context.watch<TaskStore>();
     final items = store.items;
 
-    return Scaffold(
+    return WillPopScope(
+      onWillPop: _confirmLeaveIfDirty,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('Tarefas'),
         actions: [
@@ -46,15 +93,49 @@ class _TasksPageState extends State<TasksPage> {
               itemCount: items.length,
               itemBuilder: (_, i) {
                 final t = items[i];
-                return TaskCard(
-                  task: t,
-                  // as páginas já tratam do push; fica tudo compat
-                  onEdit: () => context.push('/tasks/edit', extra: t),
-                  onTap: () => context.push('/tasks/view', extra: t),
+                return Dismissible(
+                  key: Key(t.id),
+                  direction: DismissDirection.horizontal,
+                  background: Container(
+                    padding: const EdgeInsets.only(left: 20),
+                    alignment: Alignment.centerLeft,
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onErrorContainer),
+                  ),
+                  secondaryBackground: Container(
+                    padding: const EdgeInsets.only(right: 20),
+                    alignment: Alignment.centerRight,
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    child: Icon(Icons.delete, color: Theme.of(context).colorScheme.onErrorContainer),
+                  ),
+                  onDismissed: (dir) => _handleDismissed(t),
+                  child: TaskCard(
+                    task: t,
+                    // as páginas já tratam do push; fica tudo compat
+                    onEdit: () => context.push('/tasks/edit', extra: t),
+                    onTap: () => context.push('/tasks/view', extra: t),
+                    onDelete: null, // deletion via swipe
+                  ),
                 );
               },
             ),
+          ),
     );
+  }
+
+  Future<void> _handleDismissed(dynamic t) async {
+    final store = context.read<TaskStore>();
+    final scaffold = ScaffoldMessenger.of(context);
+    // remove and offer undo
+    await store.remove(t.id);
+    scaffold.clearSnackBars();
+    scaffold.showSnackBar(SnackBar(
+      content: const Text('Tarefa eliminada'),
+      action: SnackBarAction(label: 'Anular', onPressed: () async {
+        // re-insert task (TaskDao.insert uses replace) to undo
+        await store.add(t);
+      }),
+    ));
   }
 
 Future<void> _clearDone() async {

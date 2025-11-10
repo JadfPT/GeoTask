@@ -98,29 +98,10 @@ class TaskCard extends StatelessWidget {
                 ],
               ),
             ),
-            PopupMenuButton<String>(
-              onSelected: (String v) {
-                switch (v) {
-                  case 'edit':
-                    if (onEdit != null) {
-                      onEdit!();
-                    } else {
-                      Navigator.pushNamed(context, '/edit_task', arguments: task);
-                    }
-                    break;
-                  case 'delete':
-                    if (onDelete != null) {
-                      onDelete!();
-                    } else {
-                      store.remove(task.id);
-                    }
-                    break;
-                }
-              },
-              itemBuilder: (c) => const [
-                PopupMenuItem(value: 'edit', child: Text('Editar')),
-                PopupMenuItem(value: 'delete', child: Text('Eliminar')),
-              ],
+            IconButton(
+              tooltip: 'Editar',
+              onPressed: onEdit ?? () => Navigator.pushNamed(context, '/tasks/edit', arguments: task),
+              icon: const Icon(Icons.edit_outlined),
             ),
           ],
         ),
