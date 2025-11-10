@@ -2,7 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../data/task_store.dart';
+import '../data/auth_store.dart';
+import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/task_card.dart';
+
+Future<String?> _loadAvatarPathForUser(String userId) async {
+  try {
+    final sp = await SharedPreferences.getInstance();
+    final key = 'avatar_$userId';
+    final path = sp.getString(key);
+    if (path == null) return null;
+    final f = File(path);
+    if (await f.exists()) return path;
+  } catch (_) {}
+  return null;
+}
+
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -36,16 +52,58 @@ class DashboardPage extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             sliver: SliverToBoxAdapter(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Olá!', style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 6),
-                  Text(
-                    _greetingSubtitle(total, pending),
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
-              ),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Personalized header with avatar initials
+                    Builder(builder: (ctx) {
+                      final auth = ctx.watch<AuthStore>();
+                      final user = auth.currentUser;
+                      String displayName = 'Utilizador';
+                      if (user != null) displayName = user.username ?? user.email;
+                      final parts = displayName.split(RegExp(r'\s+'));
+                      final initials = parts.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').take(2).join();
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // show saved avatar image if available, otherwise initials fallback
+                          if (user == null)
+                            CircleAvatar(
+                              radius: 28,
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              child: Text(initials, style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700)),
+                            )
+                          else
+                            FutureBuilder<String?>(
+                              future: _loadAvatarPathForUser(user.id),
+                              builder: (fbCtx, snap) {
+                                final path = snap.data;
+                                if (snap.connectionState == ConnectionState.done && path != null) {
+                                  return CircleAvatar(
+                                    radius: 28,
+                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                    backgroundImage: FileImage(File(path)),
+                                  );
+                                }
+                                return CircleAvatar(
+                                  radius: 28,
+                                  backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                  child: Text(initials, style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.w700)),
+                                );
+                              },
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                              Text('Olá, ${displayName.split(' ').first}!', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                              const SizedBox(height: 6),
+                              Text(_greetingSubtitle(total, pending), style: Theme.of(context).textTheme.bodyMedium),
+                            ]),
+                          ),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
             ),
           ),
 
