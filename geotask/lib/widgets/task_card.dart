@@ -5,6 +5,15 @@ import '../data/categories_store.dart';
 import '../models/task.dart';
 import 'category_chip.dart';
 
+/*
+  Ficheiro: task_card.dart
+  Propósito: Cartão reutilizável que apresenta uma tarefa na lista principal.
+
+  Funcionalidade:
+  - Mostra título, categorias (chips), data/ícone de localização e acções (editar, alternar concluído).
+  - Reconstrói quando `CategoriesStore` muda para reflectir cores actualizadas.
+*/
+
 class TaskCard extends StatelessWidget {
   final Task task;
   final VoidCallback? onToggle;

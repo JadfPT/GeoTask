@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/*
+  Ficheiro: palette_selector.dart
+  Propósito: Selector horizontal de cores (paleta) para escolher cor de categoria.
+  - Retorna o valor ARGB32 seleccionado através de `onSelected`.
+*/
 
 /// A small horizontal palette selector used in the app for picking category
 /// colors. It renders a horizontal list of circular color swatches and calls
