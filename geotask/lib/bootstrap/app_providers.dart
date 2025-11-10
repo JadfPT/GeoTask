@@ -7,12 +7,20 @@ import '../data/task_store.dart';
 import '../theme/app_theme.dart';
 import '../services/notification_controller.dart';
 
-/// AppProviders sets up top-level providers used by the application.
-///
-/// Responsibilities:
-/// - Create the [AuthStore] and load persisted session.
-/// - Provide user-scoped [CategoriesStore], [TaskStore] and [ThemeController]
-///   as proxy providers that react to authentication changes.
+/*
+  Ficheiro: app_providers.dart
+  Propósito: Configurar os providers de topo da aplicação.
+
+  Descrição:
+  - Cria e injeta o `AuthStore` responsável pela sessão e autenticação.
+  - Fornece stores dependentes do utilizador (`CategoriesStore`, `TaskStore`)
+    e o `ThemeController` como proxy providers, para que reajam a mudanças
+    de autenticação (ex.: carregar dados do utilizador atual).
+
+  Nota: o `NotificationController` é ligado ao `TaskStore` quando houver
+  um utilizador autenticado, garantindo que notificações por tarefa são
+  ativadas apenas para o utilizador correcto.
+*/
 class AppProviders extends StatelessWidget {
   final Widget child;
   const AppProviders({super.key, required this.child});

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 
-/// Central application palette used by category color pickers and other
-/// UI elements that need a small, curated set of colors.
-///
-/// Export a single `appPalette` constant so all pages reuse the same set.
+/*
+  Ficheiro: palette.dart
+  Propósito: Paleta central de cores usada pela aplicação.
+
+  Descrição:
+  - Exporta a constante `appPalette` com um conjunto pequeno e consistente
+    de cores que são reutilizadas por pickers de categoria e elementos UI.
+*/
+
+/// Paleta reutilizável para categorias e elementos visuais.
 const List<Color> appPalette = <Color>[
   Color(0xFF7C4DFF),
   Color(0xFF536DFE),

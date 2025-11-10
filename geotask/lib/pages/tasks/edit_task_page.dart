@@ -8,7 +8,23 @@ import '../../data/auth_store.dart';
 import '../../models/task.dart';
 import '../../widgets/categories_multi_selector.dart';
 import '../../widgets/app_snackbar.dart';
-import '../map/pick_location_page.dart'; // <-- IMPORT RESTAURADO
+import '../map/pick_location_page.dart';
+
+/*
+  Ficheiro: edit_task_page.dart
+  Propósito: Formulário para criar ou editar uma tarefa.
+
+  Resumo:
+  - Apoia tanto o fluxo de criação (nova tarefa) como edição (recebe `Task`).
+  - Permite definir título, nota, data/hora, categorias (até 3) e localização
+    (ponto + raio).
+  - Convém validar título (obrigatório) e limitar o número de categorias.
+
+  Observações técnicas:
+  - Usa `PickLocationPage` para escolher a localização em modo fullscreen.
+  - Mantém compatibilidade com o campo legacy `category` além do novo
+    `categories` (lista), preenchendo ambos quando aplicável.
+*/
 
 class EditTaskPage extends StatefulWidget {
   final Task? task;    // compat

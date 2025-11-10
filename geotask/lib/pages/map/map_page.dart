@@ -4,8 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:provider/provider.dart';
-// Camera persistence removed: we prefer always attempting to locate the user
-// on map open and fall back to a static location if unavailable.
+
+/*
+  Ficheiro: map_page.dart
+  Propósito: Apresentar e interagir com o mapa principal da aplicação.
+
+  Descrição concisa:
+  - Mostra as tarefas com localização como marcadores e círculos.
+  - Gerencia a câmara (centrar no utilizador ou num ponto pedido por outra página).
+  - Usa um stream partilhado para actualizações de posição para reduzir consumo.
+  - Fornece mecanismos de fallback (última posição conhecida / localização fixa).
+*/
+
+// Persistência da câmera removida: preferimos sempre tentar localizar o usuário
+// ao abrir o mapa e recorrer a uma localização estática se não estiver disponível.
 
 import '../../data/task_store.dart';
 import '../../models/task.dart';
@@ -14,8 +26,8 @@ import '../../widgets/app_snackbar.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
-  // External request: set this before navigating to '/map' to ask the map
-  // to animate to a specific point on create.
+  // Pedido externo: defina isto antes de navegar para '/map' para pedir ao mapa
+  // para animar para um ponto específico na criação.
   static LatLng? pendingCenter;
 
   @override
@@ -26,9 +38,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   /// Memória simples da câmara durante a vida da app (para não voltar a Lisboa).
   static CameraPosition? _rememberedCamera;
   
-  // Track whether we've already attempted the initial locate during this
-  // app session. This prevents showing the locating indicator every time
-  // the user navigates to the page.
+  // Verificar se já tentamos a localização inicial durante este processo
+  // sessão da app. Isto previne mostrar o indicador de localização sempre que
+  // o utilizador navega para a página.
   static bool _initialLocateTried = false;
 
   static const _fallback = LatLng(40.280572969058966, -7.5043608514295075); // Covilhã
@@ -40,47 +52,47 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
   MapType _mapType = MapType.normal;
   LatLng _center = _fallback;
   LatLng? _user;
-  // When toggled, forces the GoogleMap location layer to re-create; this
-  // helps in some devices/versions where the blue dot disappears after
-  // navigating away and back.
+  // Quando alternado, força a camada de localização do GoogleMap a ser recriada; isto
+  // ajuda em alguns dispositivos/versões onde o ponto azul desaparece após
+  // navegar para longe e voltar.
   bool _showMyLocation = true;
-  // Position stream subscription for quicker/faster updates.
-  // instance-level subscription removed in favor of shared static subscription
-  // Shared subscription and last position across page instances so we only
-  // actively search once per app session.
+  // Posicione a assinatura do fluxo para atualizações mais rápidas.
+  // assinatura a nível de instância removida em favor de assinatura estática compartilhada
+  // Assinatura compartilhada e última posição entre instâncias de página para que só
+  // pesquisemos ativamente uma vez por sessão de aplicativo.
   static StreamSubscription<Position>? _sharedPosSub;
   static Position? _sharedLastPos;
-  bool _locating = false; // show "a procurar" indicator while waiting
+  bool _locating = false; // mostrar indicador "a procurar" enquanto espera
   bool _gotInitialFix = false;
-  // no persistence timer anymore
+  // sem temporizador de persistência
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Try to get last-known position immediately so we can show that quickly.
+    // Tente obter a última posição conhecida imediatamente para que possamos mostrar isso rapidamente.
     _prefetchLastOrFallback();
-    // Proactively request/check location permission so that when the map
-    // requests a fresh position we don't block on the permission dialog.
-    // This is non-blocking and won't show UI on denial; the explicit
-    // _centerOnMe() called from the button still shows SnackBars.
+    // Solicite/verifique proativamente a permissão de localização para que, quando o mapa
+    // solicitar uma posição nova, não bloqueemos no diálogo de permissão.
+    // Isso é não bloqueante e não mostrará UI em caso de negação; o explícito
+    // _centerOnMe() chamado a partir do botão ainda mostra SnackBars.
     _ensurePermission();
-    // No persisted camera: prefer a fresh locate or fallback.
-    // If we already have a shared last-known position from a previous
-    // stream, use it so we don't show the fallback.
+   // Sem câmera persistente: prefira uma nova localização ou uma alternativa.
+   // Se já tivermos uma última posição conhecida compartilhada de um fluxo anterior,
+   // use-a para que não mostremos a alternativa.
     if (_sharedLastPos != null) {
       _user = LatLng(_sharedLastPos!.latitude, _sharedLastPos!.longitude);
       _center = _user!;
       _gotInitialFix = true;
     }
 
-    // Start position stream to get faster location updates (best-effort)
-    // only if we haven't attempted the initial locate in this session.
+    // Iniciar fluxo de posição para obter atualizações de localização mais rápidas (melhor esforço)
+    // apenas se ainda não tentamos a localização inicial nesta sessão.
     if (!_initialLocateTried) {
       _startPositionStream(showLocating: true);
     } else if (_sharedPosSub != null) {
-      // shared subscription already running; instance will pick up
-      // last-known position from `_sharedLastPos` (set above)
+      // assinatura compartilhada já em execução; a instância irá captar
+      // a última posição conhecida de `_sharedLastPos` (definida acima)
     }
   }
 
@@ -92,17 +104,18 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When the app/page resumes, ensure we have permission and try a
-    // quick locate so the blue dot appears reliably.
+    // Quando a app/página for retomado, verifique se temos permissão e tente uma
+    // localização rápida para que o ponto azul apareça de forma confiável.
     if (state == AppLifecycleState.resumed) {
       _ensurePermission();
-      // If we don't have a shared last-known pos, try a quick locate.
+      // Se não tivermos uma última posição conhecida compartilhada, tente uma localização rápida.
       if (_sharedLastPos == null) {
         _centerOnMeBackground();
       }
 
-      // Some devices need the location layer re-enabled to show the blue
-      // dot after a navigation. Toggle the flag briefly to force a redraw.
+      // Alguns dispositivos precisam que a camada de localização seja reativada para mostrar o ponto azul após uma navegação. 
+      // Altere a flag brevemente para forçar uma nova renderização.
+
       if (mounted) {
         setState(() => _showMyLocation = false);
         Future.delayed(const Duration(milliseconds: 150), () {
@@ -118,9 +131,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       final last = await Geolocator.getLastKnownPosition();
       if (last != null) {
         setState(() => _center = LatLng(last.latitude, last.longitude));
-        // If the map controller is already ready and we don't have a remembered
-        // camera, move the camera quickly to the last-known position so the
-        // user doesn't see the fallback for longer than necessary.
+        // Se o controlador do mapa já estiver pronto e não tivermos uma câmera lembrada,
+        // mova a câmera rapidamente para a última posição conhecida para que o
+        // usuário não veja o fallback por mais tempo do que o necessário.
         if (_mapCtrl.isCompleted && _rememberedCamera == null && !_gotInitialFix) {
           _animate(
             CameraUpdate.newCameraPosition(
@@ -165,11 +178,12 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  /// Try to get a fresh location in background without showing permission
-  /// snackbars and with a short timeout — used on first map open so UI
-  /// doesn't block waiting for a GPS fix.
+  /// Tente obter uma localização atualizada em segundo plano sem mostrar
+  /// snackbars de permissão e com um tempo limite curto — usado na primeira
+  /// abertura do mapa para que a interface do usuário não fique bloqueada
+  /// aguardando um fixo de GPS.
   Future<void> _centerOnMeBackground() async {
-    // Only show locating UI the first time we attempt an initial locate.
+    // Exibir a interface de localização apenas na primeira tentativa de localização.
     if (!_initialLocateTried) {
       _locating = true;
       if (mounted) setState(() {});
@@ -180,9 +194,9 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         p = await Geolocator.requestPermission();
       }
       if (p == LocationPermission.denied || p == LocationPermission.deniedForever) {
-        return; // don't spam the user with messages here
+        return; // não incomode o usuário com mensagens aqui
       }
-      // Try quickly to get a current position — timeout avoids long waits.
+      // Tente rapidamente obter uma posição atual — o tempo limite evita esperas longas.
   final pos = await Geolocator.getCurrentPosition().timeout(const Duration(seconds: 6));
   final here = LatLng(pos.latitude, pos.longitude);
   _user = here;
@@ -191,7 +205,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       setState(() {
         _center = here;
       });
-      // Animate without awaiting to avoid blocking map callbacks/UI.
+      // Animar sem aguardar para evitar o bloqueio de callbacks do mapa/interface do usuário.
       _animate(
         CameraUpdate.newCameraPosition(
           CameraPosition(target: here, zoom: 15.5),
@@ -208,12 +222,12 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         if (mounted) setState(() {});
       }
       _initialLocateTried = true;
-      // ignore timeouts or other failures silently — map already centered on
-      // last-known or fallback position so UX is still fine.
+    // Ignorar timeouts ou outras falhas silenciosamente — o mapa já está centralizado em
+    // última posição conhecida ou de fallback para que a experiência do usuário continue boa.
     }
   }
 
-  /// Ensure permission proactively but silently.
+  /// Garantir permissão proativamente, mas silenciosamente.
   Future<LocationPermission> _ensurePermission() async {
     try {
       var p = await Geolocator.checkPermission();
@@ -235,7 +249,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       if (p == LocationPermission.denied || p == LocationPermission.deniedForever) {
         return;
       }
-      // Mark locating only if requested (first app-open visit).
+      // Marcar localização apenas se solicitado (primeira visita de abertura do app).
       if (showLocating) {
         _locating = true;
         if (mounted) setState(() {});
@@ -246,8 +260,8 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
         distanceFilter: 10,
       );
 
-      // If a shared subscription already exists, attach to it instead of
-      // creating a new one so we only actively query once per session.
+      // Se uma assinatura compartilhada já existe, conecte-se a ela em vez de
+      // criar uma nova para que só consultemos ativamente uma vez por sessão.
       if (_sharedPosSub != null) {
         return;
       }
@@ -255,7 +269,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
       _sharedPosSub = Geolocator.getPositionStream(locationSettings: settings).listen((pos) {
         final here = LatLng(pos.latitude, pos.longitude);
         _sharedLastPos = pos;
-        // If this instance is mounted, update UI
+        // Se esta instância estiver montada, atualize a interface do usuário
         if (mounted) {
           _user = here;
           setState(() {});
@@ -266,19 +280,19 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
             _locating = false;
             if (mounted) setState(() {});
           }
-          // animate once to the user's location
+          // animar uma vez para a localização do usuário
           _animate(
             CameraUpdate.newCameraPosition(
               CameraPosition(target: here, zoom: 15.5),
             ),
           );
-          // We attempted the initial locate now; don't show locating again
-          // on subsequent opens during this app session.
+          // Tentamos a localização inicial agora; não mostrar "localizando" novamente
+          // em aberturas subsequentes durante esta sessão do aplicativo.
           _initialLocateTried = true;
         }
       });
-  // keep the shared reference in `_sharedPosSub` so other instances can
-  // reuse it; we don't keep an instance-level subscription.
+  // manter a referência compartilhada em `_sharedPosSub` para que outras instâncias possam
+  // reutilizá-la; não mantemos uma assinatura em nível de instância.
     } catch (_) {
       if (showLocating) {
         _locating = false;
@@ -288,7 +302,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
     }
   }
 
-  // dispose removed (handled earlier to remove observer)
+  // dispose removido (tratado anteriormente para remover observador)
 
   @override
   Widget build(BuildContext context) {
@@ -371,25 +385,25 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
               if (!_mapCtrl.isCompleted) _mapCtrl.complete(c);
               // centra automaticamente SÓ na 1ª abertura (sem memória anterior)
               if (_rememberedCamera == null) {
-                // Move quickly to the last-known or fallback center without
-                // waiting for a potentially slow GPS fix.
+                // Mover rapidamente para o centro conhecido ou de fallback sem
+                // esperar por uma possível correção lenta do GPS.
                 _animate(
                   CameraUpdate.newCameraPosition(
                     CameraPosition(target: _center, zoom: 12),
                   ),
                 );
-                // Try to obtain a fresh location in background and animate
-                // the camera when available.
+                // Tentar obter uma localização atualizada em segundo plano e animar
+                // a câmera quando disponível.
                 _centerOnMeBackground();
               }
-              // If we don't yet have a shared last-known position (for example
-              // after navigating away and back), trigger a quick background
-              // locate so the native blue dot appears faster.
+              // Se ainda não temos uma última posição conhecida compartilhada (por exemplo
+              // após navegar para longe e voltar), dispare uma localização rápida em segundo plano
+              // para que o ponto azul nativo apareça mais rápido.
               if (_sharedLastPos == null) {
                 _centerOnMeBackground();
               }
-              // If another page requested the map to centre on a specific
-              // point, do it now and clear the request.
+              // Se outra página solicitou que o mapa se centralizasse em um ponto específico,
+              // faça isso agora e limpe a solicitação.
               if (MapPage.pendingCenter != null) {
                 final p = MapPage.pendingCenter!;
                 MapPage.pendingCenter = null;
@@ -412,7 +426,7 @@ class _MapPageState extends State<MapPage> with WidgetsBindingObserver {
             circles: circles,
           ),
 
-          // locating indicator
+          // indicador de localização
           if (_locating)
             Positioned(
               top: 16,

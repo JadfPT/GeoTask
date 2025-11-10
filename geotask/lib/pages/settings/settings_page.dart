@@ -16,6 +16,16 @@ import 'about_sheet.dart';
 import 'dev_tools.dart';
 import '../../theme/app_theme.dart';
 
+/*
+  Ficheiro: settings_page.dart
+  Propósito: Página de definições da aplicação.
+
+  Resumo:
+  - Agrupa opções do utilizador (conta, aparência, categorias, permissões).
+  - Fornece acesso a ações rápidas (editar conta, alternar tema, abrir definições do SO).
+  - Contém mecanismos para desbloquear opções de desenvolvimento por utilizador.
+*/
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -66,7 +76,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _setDevUnlocked(bool v) async {
     try {
-      // capture userId synchronously before awaiting
+      // Capturar userId de forma síncrona antes de aguardar
       final userId = context.read<AuthStore>().currentUser?.id ?? 'anon';
       final sp = await SharedPreferences.getInstance();
       final key = 'dev_unlocked.$userId';
@@ -78,7 +88,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _aboutTaps++;
       final userId = context.read<AuthStore>().currentUser?.id ?? 'anon';
-      // ensure we're tracking for the current user
+      // garantir que estamos a rastrear o utilizador atual
       if (_loadedForUserId != userId) {
         _loadedForUserId = userId;
         _devUnlocked = false;
@@ -95,10 +105,10 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // reload dev unlock state when the current user changes
+    // recarregar estado de desbloqueio de desenvolvimento quando o utilizador atual muda
     final userId = context.read<AuthStore>().currentUser?.id ?? 'anon';
     if (_loadedForUserId != userId) {
-      // reset visible state until we load the specific user's flag
+      // Redefine o estado visível até que carreguemos a flag específica do utilizador
       _devUnlocked = false;
       _loadDevUnlockedFor(userId);
     }
@@ -114,13 +124,13 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         children: [
-          // Account section
+          // Secção de conta
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: Text('Conta', style: Theme.of(context).textTheme.titleMedium),
           ),
           const SizedBox(height: 8),
-          // Account card: tap to open a full account sheet with clear actions
+          // Cartão de conta: toque para abrir uma folha de conta completa com ações claras
           AppCard(
             leading: Builder(builder: (ctx) {
               final auth = ctx.watch<AuthStore>();
@@ -149,7 +159,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       backgroundImage: FileImage(File(path)),
                     );
                   }
-                  // fallback to initials while loading or if no avatar
+                  // fallback para iniciais enquanto carrega ou se não houver avatar
                   return CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.16 * 255).round()),
                     child: initials.isEmpty ? const Icon(Icons.person_outline, color: Colors.white) : Text(initials, style: const TextStyle(color: Colors.white)),
@@ -173,7 +183,7 @@ class _SettingsPageState extends State<SettingsPage> {
             }),
             onTap: () => _showAccountSheet(context),
           ),
-          // Appearance & categories
+          // Aparência e categorias
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -192,7 +202,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 12),
 
-          // Management section
+          // Secção de gestão
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -207,7 +217,7 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => context.push('/settings/categories'),
           ),
 
-          // Permissions section
+          // Secção de permissões
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -228,19 +238,19 @@ class _SettingsPageState extends State<SettingsPage> {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => _openAppSettings(context),
           ),
-          // Dev section: visible only when unlocked for the current user
+          // Secção de desenvolvimento: visível apenas quando desbloqueada para o utilizador atual
           if (_devUnlocked)
             DevOptions(onHideDev: () {
-              // Persist hidden state and update UI; we don't await here because
-              // DevOptions expects a synchronous callback. _setDevUnlocked is
-              // asynchronous but will complete shortly.
+              // Persiste o estado oculto e atualiza a interface do usuário; não usamos await aqui porque
+              // DevOptions espera um retorno de chamada síncrono. _setDevUnlocked é
+              // assíncrono, mas será concluído em breve.
               _setDevUnlocked(false);
               if (!mounted) return;
               setState(() {
                 _devUnlocked = false;
               });
             }),
-          // Help / About
+          // Ajuda / Sobre
           const SizedBox(height: 12),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),

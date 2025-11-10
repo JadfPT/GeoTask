@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 
+/*
+  Ficheiro: about_sheet.dart
+  Propósito: Mostrar informação "Sobre" a partir de um bottom sheet.
+
+  Observações:
+  - Contém texto descritivo e links rápidos (contacto).
+  - O título é tocável para suportar um easter-egg (desbloqueio de dev).
+*/
+
 void showAboutGeoTasks(BuildContext context, {VoidCallback? onTitleTap}) {
   showModalBottomSheet(
     context: context,
@@ -18,7 +27,7 @@ void showAboutGeoTasks(BuildContext context, {VoidCallback? onTitleTap}) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Title is tappable to support a hidden developer easter-egg.
+              // O título é clicável para revelar um easter egg oculto de desenvolvedor.
               GestureDetector(
                 onTap: onTitleTap,
                 child: Text('GeoTasks', style: Theme.of(context).textTheme.headlineSmall),

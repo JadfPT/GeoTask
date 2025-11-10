@@ -10,6 +10,15 @@ import '../../widgets/app_snackbar.dart';
 import '../../widgets/app_card.dart';
 import '../../theme/palette.dart';
 
+/*
+  Ficheiro: categories_page.dart
+  Propósito: Gestão das categorias do utilizador — criar, editar, apagar e ordenar.
+
+  Pontos importantes:
+  - Mantém um buffer local para edição off-line; aplica alterações ao `CategoriesStore` quando o utilizador grava.
+  - Fornece reordenação com `ReorderableListView` e validações contra nomes duplicados.
+*/
+
 class CategoriesPage extends StatefulWidget {
   const CategoriesPage({super.key});
 
@@ -19,8 +28,8 @@ class CategoriesPage extends StatefulWidget {
 
 class _CategoriesPageState extends State<CategoriesPage> {
   final _nameCtrl = TextEditingController();
-
-  // Palette moved to a central constant so it can be shared across the app.
+  
+  // A palette foi movida para uma constante central para que possa ser utilizada em toda a app.
   int _selectedColor = appPalette.first.toARGB32();
 
   List<Category> _buffer = const [];

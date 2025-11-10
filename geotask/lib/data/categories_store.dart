@@ -6,6 +6,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/category.dart' as model;
 import 'db/category_dao.dart';
 
+/*
+  Ficheiro: categories_store.dart
+  Propósito: Store para gerir categorias do utilizador.
+
+  Principais responsabilidades:
+  - Carregar categorias do SQLite, migrar dados legados de SharedPreferences
+    e semear categorias por omissão na primeira execução.
+  - Fornecer operações por-posição (insert/update/delete/reorder) que
+    persistem individualmente para evitar reescritas amplas da tabela.
+  - Manter um mecanismo de carregamento concorrente (`_loadingCompleter`)
+    para prevenir múltiplos seedings em caso de chamadas concorrentes.
+*/
+
 class CategoriesStore extends ChangeNotifier {
   final _uuid = const Uuid();
   String? _userId;
@@ -20,13 +33,10 @@ class CategoriesStore extends ChangeNotifier {
 
   /// Carrega do disco (SQLite). Na 1ª execução semeia 3 categorias padrão.
   Future<void> load([String? userId]) async {
-    // If another load is in progress, wait for it to finish. This prevents
-    // concurrent loads seeding defaults multiple times when callers (for
-    // example the proxy provider and an explicit load after login) race.
+    // Se já houver um load em progresso, aguardar para evitar condições de corrida
     if (_loadingCompleter != null) {
       await _loadingCompleter!.future;
-      // If the previously loaded user matches the requested one and we're
-      // already loaded, nothing to do.
+      // Se o userId coincidir e já estivermos carregados, nada a fazer
       if (_userId == userId && _loaded) return;
     }
 
@@ -43,11 +53,11 @@ class CategoriesStore extends ChangeNotifier {
     }
 
     final prefs = await SharedPreferences.getInstance();
-    // Migrate legacy SharedPreferences categories if present
+    // Migrar categorias legadas em SharedPreferences para a BD se existirem
     final legacyKey = 'categories.v1.$userId';
     final legacy = prefs.getStringList(legacyKey);
     if (legacy != null) {
-      // migrate into DB and remove legacy
+      // migrar para DB e remover legado
       final migrated = legacy.map((s) => model.Category.fromJson(s)).toList(growable: false);
       for (var i = 0; i < migrated.length; i++) {
         await CategoryDao.instance.insert(migrated[i], userId, sortIndex: i);
@@ -57,7 +67,7 @@ class CategoriesStore extends ChangeNotifier {
 
     final rows = await CategoryDao.instance.getAllForOwner(userId);
     if (rows.isEmpty) {
-      // seed defaults
+      // semear defaults na primeira execução para melhor UX
       final defaults = [
         model.Category(id: _uuid.v4(), name: 'Pessoal', color: 0xFF7C4DFF),
         model.Category(id: _uuid.v4(), name: 'Trabalho', color: 0xFF26A69A),
@@ -81,24 +91,24 @@ class CategoriesStore extends ChangeNotifier {
     _loadingCompleter = null;
   }
 
-  // NOTE: previous implementation included a full rewrite helper `_saveToDb`.
-  // We keep per-operation persistence (insert/update/delete/reorder) which
-  // avoids wide table rewrites and is simpler to reason about.
+  // NOTE: implementação anterior incluía um `_saveToDb` que reescrevia tudo.
+  // Mantemos persistência por operação (insert/update/delete/reorder) para
+  // evitar reescritas amplas e facilitar raciocínio sobre o estado.
 
-  /// Add a new category for the current user and persist it.
-  /// Returns immediately if there is no associated user.
+  /// Adiciona uma nova categoria para o utilizador actual e persiste-a.
+  /// Se não houver utilizador associado, retorna imediatamente.
   Future<void> add(String name, int color) async {
     final n = name.trim();
     if (n.isEmpty) return;
     if (_userId == null) return;
     final c = model.Category(id: _uuid.v4(), name: n, color: color);
-    // persist with the next sortIndex
+    // persistir com o próximo sortIndex
     await CategoryDao.instance.insert(c, _userId!, sortIndex: _items.length);
     _items.add(c);
     notifyListeners();
   }
 
-  /// Update an existing category and persist the change.
+  /// Actualiza uma categoria existente e persiste a alteração.
   Future<void> update(String id, {String? name, int? color}) async {
     final i = _items.indexWhere((c) => c.id == id);
     if (i == -1) return;
@@ -113,7 +123,7 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Remove a category and persist deletion.
+  /// Remove uma categoria e persiste a eliminação.
   Future<void> remove(String id) async {
     final i = _items.indexWhere((c) => c.id == id);
     if (i == -1) return;
@@ -122,14 +132,14 @@ class CategoriesStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Reorder the local list and persist the new ordering.
+  /// Reordena a lista local e persiste a nova ordem.
   Future<void> reorder(int oldIndex, int newIndex) async {
     if (oldIndex < 0 || oldIndex >= _items.length) return;
     if (newIndex > oldIndex) newIndex -= 1;
     newIndex = newIndex.clamp(0, _items.length);
     final item = _items.removeAt(oldIndex);
     _items.insert(newIndex, item);
-    // persist order
+    // persistir ordem
     await CategoryDao.instance.reorder(_items.map((e) => e.id).toList());
     notifyListeners();
   }

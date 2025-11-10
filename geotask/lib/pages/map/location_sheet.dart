@@ -7,6 +7,16 @@ import '../../data/categories_store.dart';
 import '../../widgets/category_chip.dart';
 import '../../widgets/empty_hint.dart';
 
+/*
+  Ficheiro: location_sheet.dart
+  Propósito: Componente em forma de folha (sheet) que lista locais/tarefas com localização.
+
+  Nota académica:
+  - Mostra resumo compacto de cada tarefa com categorias e permite seleccionar
+    para centrar o mapa na tarefa.
+  - O comportamento visual (peek / expand) é controlado por `DraggableScrollableSheet`.
+*/
+
 typedef TaskTap = void Function(Task);
 
 class LocationSheet extends StatefulWidget {
@@ -133,7 +143,7 @@ class _LocationSheetState extends State<LocationSheet> {
   }
 }
 
-// Empty hint replaced by shared EmptyHint widget in lib/widgets/empty_hint.dart
+// Hint vazia substituída pelo widget compartilhado EmptyHint em lib/widgets/empty_hint.dart
 
 class _TaskRow extends StatelessWidget {
   final Task task;
@@ -196,5 +206,3 @@ class _TaskRow extends StatelessWidget {
     );
   }
 }
-
-// Replaced by shared CategoryChip in lib/widgets/category_chip.dart

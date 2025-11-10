@@ -5,14 +5,22 @@ import 'notification_service.dart';
 import 'geofence_watcher.dart';
 import 'foreground_service.dart';
 
-/// NotificationController orchestrates time-based and location-based
-/// notifications for the currently attached [TaskStore].
-///
-/// It does not replace the low-level [NotificationService] (which sends
-/// notifications) nor the geofence watcher (which provides raw location
-/// events). Instead it wires both together: it starts/stops the
-/// geofence watcher and periodically scans tasks for due times and triggers
-/// notifications when appropriate.
+/*
+  Ficheiro: notification_controller.dart
+  Propósito: Orquestrar notificações por tempo e por localização.
+
+  Descrição:
+  - Liga o `TaskStore` ao `GeofenceWatcher` e ao `NotificationService`.
+  - Inicia um timer periódico para verificar tarefas com `due` e também
+    arranca o watcher de geofences para notificações de proximidade.
+
+  Observações:
+  - Inicia um `ForegroundService` para melhorar a
+    probabilidade de receber actualizações em background em Android.
+  - Mantém lógica para evitar reenvios repetidos: `lastNotifiedAt` em cada
+    tarefa é usado para deduplicação persistente.
+*/
+
 class NotificationController {
   NotificationController._();
   static final NotificationController instance = NotificationController._();
@@ -20,26 +28,26 @@ class NotificationController {
   TaskStore? _store;
   Timer? _timer;
 
-  /// Attach to a TaskStore. This starts a periodic timer and the geofence
-  /// watcher. Re-attaching with the same store is a no-op.
+/// Conectar a um TaskStore. Isso inicia um temporizador periódico e o observador de geofence.
+/// Conectar novamente ao mesmo armazenamento não tem efeito.
   void attach(TaskStore store) {
     if (identical(_store, store)) return;
     detach();
     _store = store;
     _store!.addListener(_onTasksChanged);
-    // start geofence watcher which will trigger notifications on enter
+    // Iniciar o observador de geofence, que acionará notificações ao entrar
     GeofenceWatcher.instance.start(store);
-    // start a foreground service so the app is more likely to keep receiving
-    // location updates while backgrounded. This is a lightweight persistent
-    // notification that keeps the process alive on most Android devices.
+    // iniciar um serviço em foreground para que o app tenha mais probabilidade de continuar a receber
+    // atualizações de localização em background. Esta é uma notificação persistente leve
+    // que mantém o processo ativo na maioria dos dispositivos Android.
     ForegroundService.start(title: 'GeoTask', content: 'A vigiar localização');
-    // periodic check for due tasks every 30 seconds
+    // verificação periódica para tarefas com prazo a cada 30 segundos
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => _checkDue());
-    // run initial check immediately
+    // executar verificação inicial imediatamente
     _checkDue();
   }
 
-  /// Detach from the current store and stop timers/watchers.
+  /// Desconectar do armazenamento atual e parar temporizadores/observadores.
   void detach() {
     _timer?.cancel();
     _timer = null;
@@ -49,21 +57,21 @@ class NotificationController {
       } catch (_) {}
       _store = null;
     }
-    // stop geofence watcher
+    // parar o observador de geofence
     GeofenceWatcher.instance.stop();
-  // stop foreground service if running
+  // parar o serviço em foreground se estiver a correr
   ForegroundService.stop();
-    // persisted per-task notification timestamps are used; nothing to
-    // clear here.
+    // os timestamps de notificação persistidos por tarefa são usados; não há nada para
+    // limpar aqui.
   }
 
   void _onTasksChanged() {
-    // If tasks were added/removed/updated, re-evaluate immediate due items
+    // Se tarefas foram adicionadas/removidas/atualizadas, reavaliar tarefas com prazo imediato
     _checkDue();
-    // Also clear notifications for tasks that are no longer present/done
+    // Também limpar notificações para tarefas que não estão mais presentes/concluídas
     if (_store == null) return;
-    // No in-memory dedupe set: the per-task `lastNotifiedAt` persisted value
-    // in the database will be used to avoid re-sending notifications.
+    // Nenhum conjunto de deduplicação em memória: o valor persistido `lastNotifiedAt` por tarefa
+    // na base de dados será usado para evitar reenvio de notificações.
   }
 
   Future<void> _checkDue() async {
@@ -74,16 +82,15 @@ class NotificationController {
       if (t.done) continue;
       final id = t.id;
       if (t.due == null) continue;
-      // skip if we've already recorded a notification after (or at) the
-      // due time. We persist lastNotifiedAt per task so that app restarts
-      // don't re-send the same overdue notification repeatedly.
+      // pular se já registamos uma notificação após (ou no) horário
+      // devido. Persistimos lastNotifiedAt por tarefa para que reinícios do app
+      // não reenviem repetidamente a mesma notificação atrasada.
       if (t.lastNotifiedAt != null) {
-        // if lastNotifiedAt is at/after the due time, assume we've already
-        // sent the due notification
+        // Se lastNotifiedAt for igual ou posterior ao horário previsto, assumir que já foi enviada a notificação.        
         if (!t.lastNotifiedAt!.isBefore(t.due!)) continue;
       }
 
-      // notify if due time passed
+    // notificar se o prazo expirou
       if (!t.due!.isAfter(now)) {
         final nid = _notifIdForTask(id);
         try {
@@ -92,7 +99,7 @@ class NotificationController {
             title: 'Tarefa: ${t.title}',
             body: t.note ?? 'Hora de executar a tarefa',
           );
-          // persist that we've notified at now
+          // persistir que notificamos agora
           await s.markTaskNotified(id, DateTime.now());
         } catch (_) {}
       }

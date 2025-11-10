@@ -4,11 +4,19 @@ import 'package:sqflite/sqflite.dart';
 import 'package:geotask/data/db/database_helper.dart';
 import 'package:geotask/models/task.dart';
 
-/// Data Access Object for `tasks` table.
-///
-/// Provides basic CRUD operations and mapping between the `Task` model and
-/// the database row representation. All methods are async and return when
-/// the underlying database operation completes.
+/*
+  Ficheiro: task_dao.dart
+  Propósito: DAO para a tabela `tasks`.
+
+  Resumo:
+  - Mapeia entre o modelo `Task` e a linha da base de dados.
+  - Trata formatos legacy/compatíveis para campos como `categories` (JSON
+    ou CSV) e `point` (lat/lng). `lastNotifiedAt` é persistido como epoch ms.
+  - Fornece operações por proprietário (`ownerId`) para suportar multi-tenant
+    (guest vs user) e migrações de dados.
+*/
+
+/// DAO para a tabela `tasks` com operações CRUD e utilitários.
 class TaskDao {
   TaskDao._private();
   static final TaskDao instance = TaskDao._private();

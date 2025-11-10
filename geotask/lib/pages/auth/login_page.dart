@@ -11,6 +11,16 @@ import '../../utils/validators.dart';
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
+/*
+  Ficheiro: login_page.dart
+  Propósito: Página de login do utilizador.
+
+  Resumo:
+  - Valida e submete credenciais para `AuthStore`.
+  - Suporta início de sessão por convidado e navegação para registo/recuperação.
+  - Recarrega stores dependentes (categorias e tarefas) após login bem-sucedido.
+*/
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
@@ -37,7 +47,7 @@ class _LoginPageState extends State<LoginPage> {
       final cats = context.read<CategoriesStore>();
       final tasks = context.read<TaskStore>();
       final user = await auth.login(_emailCtrl.text.trim(), _passCtrl.text);
-      // reload user-scoped stores
+      // recarregar armazenamentos com escopo de usuário
       await cats.load(user.id);
       await tasks.loadFromDb(ownerId: user.id);
       if (mounted) {
@@ -83,7 +93,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Bold gradient background
+          // Fundo em gradiente
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -103,7 +113,7 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Large rounded logo
+                    // Logótipo grande arredondado
                     Container(
                       width: 140,
                       height: 140,
@@ -127,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Translucent form card
+                    // Cartão de formulário translúcido
                     Container(
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface.withAlpha((0.06 * 255).round()),

@@ -7,6 +7,17 @@ import '../../data/categories_store.dart';
 import '../../widgets/category_chip.dart';
 import '../map/map_page.dart';
 
+/*
+  Ficheiro: task_view_page.dart
+  Propósito: Mostrar os detalhes completos de uma tarefa.
+
+  Descrição:
+  - Mostra título, descrição, data/hora, categorias e informação de localização.
+  - Procura sempre a versão mais recente da tarefa em `TaskStore` para
+    assegurar que edições reflectem imediatamente.
+  - Permite abrir a localização da tarefa no mapa centralizando o ponto.
+*/
+
 class TaskViewPage extends StatelessWidget {
   final Task task;
   const TaskViewPage({super.key, required this.task});
@@ -20,8 +31,7 @@ class TaskViewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = context.watch<TaskStore>();
     final catsStore = context.watch<CategoriesStore>();
-    // find freshest copy of the task in the store (so edits reflect here
-    // immediately when TaskStore updates)
+    // Procurar a cópia mais recente da tarefa no store (actualizações imediatas)
     final Task current = store.items.firstWhere(
       (e) => e.id == task.id,
       orElse: () => task,
@@ -111,7 +121,7 @@ class TaskViewPage extends StatelessWidget {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               ),
                               onPressed: () {
-                                // Request map to centre on this point and open the map
+                                // Pedir ao mapa para centrar neste ponto e abrir a página do mapa
                                 MapPage.pendingCenter = current.point;
                                 context.go('/map');
                               },

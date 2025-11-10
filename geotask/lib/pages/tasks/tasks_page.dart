@@ -9,6 +9,23 @@ import '../../widgets/task_card.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/app_snackbar.dart';
 
+/*
+  Ficheiro: tasks_page.dart
+  Propósito: Página principal que lista as tarefas do utilizador.
+
+  Descrição:
+  - Mostra a lista de tarefas a partir de `TaskStore`.
+  - Permite criar nova tarefa, editar/ver detalhes e remover (swipe ou botão).
+  - Detecta alterações não persistidas em memória e pergunta ao utilizador se
+    deseja guardar ou reverter quando tenta sair da página.
+
+  Pontos a notar:
+  - A persistência é feita por operação (cada alteração chama o DAO). A
+    página mantém um snapshot inicial para detectar diferenças locais.
+  - Uso de `WillPopScope` para interceptar saída e prevenir perda acidental
+    de mudanças.
+*/
+
 class TasksPage extends StatefulWidget {
   const TasksPage({super.key});
 
@@ -39,7 +56,7 @@ class _TasksPageState extends State<TasksPage> {
     if (_initialSnapshot == null) return true;
     if (!_isDirty(store)) return true;
 
-    // Capture ownerId before awaiting to avoid using BuildContext after an async gap
+    // Captura o ownerId antes de aguardar para evitar o uso do BuildContext após um intervalo assíncrono
     final ownerId = context.read<AuthStore>().currentUser?.id;
 
     final choice = await showConfirmDialog(context,
@@ -50,11 +67,11 @@ class _TasksPageState extends State<TasksPage> {
     );
 
     if (choice == true) {
-      // Changes are already persisted per-operation; refresh snapshot and allow pop
+      // As alterações já estão persistidas por operação; atualizar snapshot e permitir sair
       _initialSnapshot = store.items.map((t) => t.toJson()).toList();
       return true;
     } else {
-      // Revert: reload from DB to discard any in-memory changes
+      // Reverter: recarregar do BD para descartar quaisquer alterações em memória
       await store.loadFromDb(ownerId: ownerId);
       return true;
     }
@@ -64,10 +81,10 @@ class _TasksPageState extends State<TasksPage> {
     final store = context.watch<TaskStore>();
     final items = store.items;
 
-    // PopScope is the newer API, but it requires Flutter >= 3.12 in the SDK.
-    // Keep using WillPopScope for compatibility and locally ignore the
-    // deprecation to avoid analyzer warnings until the project SDK is
-    // upgraded. Replace with PopScope when the environment supports it.
+    // PopScope é a API mais recente, mas requer Flutter >= 3.12 no SDK.
+    // Continuar a usar WillPopScope para compatibilidade e ignorar localmente a
+    // depreciação para evitar avisos do analisador até que o SDK do projeto seja
+    // atualizado. Substituir por PopScope quando o ambiente suportar.
     // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: _confirmLeaveIfDirty,
@@ -132,14 +149,14 @@ class _TasksPageState extends State<TasksPage> {
     final store = context.read<TaskStore>();
     final scaffold = ScaffoldMessenger.of(context);
     final cs = Theme.of(context).colorScheme;
-    // remove and offer undo
+    // remover e oferecer a opção de desfazer
     await store.remove(t.id);
     scaffold.clearSnackBars();
     scaffold.showSnackBar(SnackBar(
       backgroundColor: cs.surface,
       content: Text('Tarefa eliminada', style: TextStyle(color: cs.onSurface)),
       action: SnackBarAction(label: 'Anular', textColor: cs.primary, onPressed: () async {
-        // re-insert task (TaskDao.insert uses replace) to undo
+        // re-inserir tarefa (TaskDao.insert usa replace) para desfazer
         await store.add(t);
       }),
     ));
@@ -155,7 +172,7 @@ Future<void> _clearDone() async {
     return;
   }
 
-  // Capture the count before awaiting dialogs
+  // Captura a contagem antes de aguardar pelos diálogos
   final count = done.length;
   final ok = await showConfirmDialog(context,
     title: 'Remover concluídas?',

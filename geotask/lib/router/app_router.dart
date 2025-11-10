@@ -17,6 +17,26 @@ import '../pages/auth/register_page.dart';
 import '../pages/auth/reset_password_page.dart';
 import '../pages/settings/edit_user_page.dart';
 
+/*
+  Ficheiro: app_router.dart
+  Propósito: Configuração do enrutamento da aplicação usando `go_router`.
+
+  Descrição sucinta:
+  - Define as rotas principais (dashboard, tarefas, mapa, definições, login,
+    registo, recuperação de password, edição de conta, entre outras).
+  - Implementa lógica de redireccionamento baseada no estado de
+    autenticação (`AuthStore`) para forçar acesso a páginas protegidas.
+  - Usa `ShellRoute` para fornecer um Scaffold com barra de navegação
+    nas secções principais da app.
+
+  Observações importantes:
+  - O redireccionamento utiliza `AuthStore.isLoaded` e `AuthStore.currentUser`
+    para decidir se o utilizador deve ser enviado para `/login` ou para
+    `/dashboard`.
+  - Rotas modais (ex.: `pick-location`) são declaradas com `parentNavigatorKey`
+    para aparecerem acima do layout com tabs.
+*/
+
 class AppRouter {
   static final GlobalKey<NavigatorState> rootNavigatorKey =
       GlobalKey<NavigatorState>();
@@ -28,7 +48,9 @@ class AppRouter {
     initialLocation: '/login',
         navigatorKey: rootNavigatorKey,
         redirect: (context, state) {
-          // Use AuthStore to decide where to redirect.
+          // Determina redirecionamentos com base no estado de autenticação.
+          // Protege rotas e evita que utilizadores autenticados voltem para
+          // as páginas de login/registo (excepto em cenários de guest->register).
           try {
             final auth = Provider.of<AuthStore>(context, listen: false);
             final currentUser = auth.currentUser;
@@ -36,9 +58,10 @@ class AppRouter {
 
             final loggingPaths = {'/login', '/register', '/reset-password'};
 
-            // If auth finished loading and there's a user:
-            // - allow guests to access /register (they'll migrate data there)
-            // - otherwise redirect away from login/register to dashboard
+            // Se a autenticação terminou e existe um utilizador autenticado:
+            // - permitir /register apenas em caso de guest que migra dados
+            // - caso contrário, redireccionar para o dashboard se estiver em
+            //   páginas de login/register
             if (isLoaded && currentUser != null) {
               final uri = state.uri.toString();
               if (loggingPaths.contains(uri) && !(auth.isGuest && uri == '/register')) {
@@ -47,14 +70,16 @@ class AppRouter {
               return null;
             }
 
-            // If auth finished loading and no user, send to login for any protected route.
+            // Se a autenticação terminou e não existe utilizador autenticado,
+            // enviar para /login quando tentar aceder a rotas protegidas.
             if (isLoaded && currentUser == null) {
               final uri = state.uri.toString();
               if (loggingPaths.contains(uri)) return null;
               return '/login';
             }
 
-            // If auth not yet loaded, don't redirect (let providers finish).
+            // Enquanto o AuthStore ainda carrega, não forçar redirecionamentos
+            // (permite aos providers terminarem a inicialização).
             return null;
           } catch (_) {
             return null;

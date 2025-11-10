@@ -4,23 +4,19 @@ import '../data/task_store.dart';
 import 'location_service.dart';
 import 'notification_service.dart';
 
-/// GeofenceWatcher continuously watches the device location and triggers
-/// local notifications when the user enters any task's radius.
-///
-/// Key behaviours:
-/// - requests permissions via [LocationService.ensurePermissions],
-/// - listens to `Geolocator.getPositionStream` with a moderate [distanceFilter]
-///   to reduce battery usage,
-/// - deduplicates notifications per task per day using an in-memory set.
-///
-/// Usage:
-/// ```dart
-/// // Start watching when you have the current TaskStore instance (e.g. after login)
-/// await GeofenceWatcher.instance.start(taskStore);
-///
-/// // Stop watching when the user logs out or you want to pause
-/// GeofenceWatcher.instance.stop();
-/// ```
+/*
+  Ficheiro: geofence_watcher.dart
+  Propósito: Vigiar a localização e disparar notificações quando o utilizador
+  entra no raio de uma tarefa.
+
+  Pontos-chave:
+  - Solicita permissões via `LocationService.ensurePermissions`.
+  - Usa `Geolocator.getPositionStream` com `distanceFilter` para reduzir
+    consumo de bateria.
+  - Deduplica notificações por tarefa por dia usando um conjunto em memória.
+  - Para persistência de deduplicaçao entre reinícios usar `TaskDao.clearLastNotifiedForOwner`.
+*/
+
 class GeofenceWatcher {
   GeofenceWatcher._();
   static final GeofenceWatcher instance = GeofenceWatcher._();
@@ -28,26 +24,26 @@ class GeofenceWatcher {
   StreamSubscription<Position>? _sub;
   DateTime _dayKey = DateTime.now();
   final Set<String> _notifiedToday = {};
-  // track previous inside/outside state for tasks to detect `enter` events
+  // Rastrear o estado anterior de dentro/fora das tarefas para detectar eventos de entrada
   final Map<String, bool> _inside = {};
 
-  /// Start listening to location changes and evaluate nearby tasks.
+  /// Começar a monitorar mudanças de localização e avaliar tarefas próximas.
   ///
-  /// `store` is the active `TaskStore` whose `items` are inspected. Keep in
-  /// mind this class uses an in-memory set to avoid duplicate notifications
-  /// across app restarts — if you need persistence across restarts, persist
-  /// the `notified` state externally.
+  /// `store` é o `TaskStore` ativo cujos `items` são inspecionados. Ter em
+  /// mente que esta classe usa um conjunto em memória para evitar notificações
+  /// duplicadas após reinícios da app — se for preciso persistência entre
+  /// reinícios, persiste o estado `notified` externamente.
   Future<void> start(TaskStore store) async {
     await LocationService.ensurePermissions();
     await _sub?.cancel();
 
-    // Initialize current position without emitting enter notifications.
+    // Inicializa a posição atual sem emitir notificações de entrada.
     Position? pos;
     try {
       pos = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
     } catch (_) {
-      // if current position fails, try last known — if both fail we'll still
-      // listen to the stream and set states on first update.
+      // se a posição actual falhar, tenta a última conhecida. Se ambas falharem ainda
+      // ouviremos o stream e definiremos estados na primeira atualização.
       try {
         pos = await Geolocator.getLastKnownPosition();
       } catch (_) {
@@ -55,7 +51,7 @@ class GeofenceWatcher {
       }
     }
 
-    // Seed _inside map: mark which tasks are currently inside their radius
+    // Seed _inside map: marcar quais tarefas estão atualmente dentro do raio de ação delas.
     if (pos != null) {
       for (final t in store.items) {
         if (t.done || t.point == null || t.radiusMeters <= 0) {
@@ -73,17 +69,17 @@ class GeofenceWatcher {
     _sub = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 25, // só reage quando te moves ~25m
+        distanceFilter: 25, // só reage quando se move ~25m
       ),
     ).listen((p) => _onPosition(p, store));
   }
 
-  /// Clear in-memory geofence state used for deduplication and enter/exit
-  /// detection. This does not modify persisted `lastNotifiedAt` values in
-  /// the database; use `TaskDao.clearLastNotifiedForOwner` for that.
+  /// Limpar o estado em memória do geofence usado para deduplicação e deteção
+  /// de entrada/saída. Isto não modifica os valores persistidos `lastNotifiedAt`
+  /// na base de dados; use `TaskDao.clearLastNotifiedForOwner` para isso.
   ///
-  /// If a [store] is provided we will try to seed the `_inside` map using
-  /// the last known position so subsequent enter/exit events are accurate.
+  /// Se for fornecido um [store], tentaremos inicializar o mapa `_inside` usando
+  /// a última posição conhecida para que os eventos subsequentes de entrada/saída sejam precisos.
   Future<void> resetForStore(TaskStore? store) async {
     _notifiedToday.clear();
     _inside.clear();
@@ -105,11 +101,11 @@ class GeofenceWatcher {
         _inside[t.id] = d <= t.radiusMeters;
       }
     } catch (_) {
-      // ignore errors; best-effort seeding only
+      // ignorar erros; somente best-effort seeding
     }
   }
 
-  /// Stop watching location updates.
+  /// Parar de monitorizar atualizações de localização.
   void stop() { _sub?.cancel(); _sub = null; }
 
   void _onPosition(Position pos, TaskStore store) {
@@ -143,12 +139,12 @@ class GeofenceWatcher {
           );
           _notifiedToday.add(t.id); // uma vez por dia
 
-          // persist last notified timestamp via the store (ignore errors)
+          // Persistir o timestamp de data/hora da última notificação por meio do armazenamento (ignorar erros)
           store.markTaskNotified(t.id, DateTime.now()).catchError((_) {});
         }
       }
 
-      // update inside state for the next event
+      // atualizar o estado de “dentro” para o próximo evento
       _inside[t.id] = currInside;
     }
   }

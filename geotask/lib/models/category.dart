@@ -1,5 +1,15 @@
 import 'dart:convert';
 
+/*
+  Ficheiro: category.dart
+  Propósito: Modelo `Category` com serialização simples para persistência.
+
+  Notas:
+  - `color` é um inteiro ARGB usado directamente em widgets Flutter.
+  - Fornece `toMap`/`fromMap` e `toJson`/`fromJson` para interoperabilidade.
+*/
+
+
 class Category {
   final String id;
   final String name;
@@ -23,6 +33,7 @@ class Category {
   factory Category.fromMap(Map<String, dynamic> map) => Category(
         id: map['id'] as String,
         name: map['name'] as String,
+    // Aceita num e converte para int (compatibilidade com fontes JSON)
         color: (map['color'] as num).toInt(),
       );
 

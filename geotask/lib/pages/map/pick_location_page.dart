@@ -4,6 +4,16 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../widgets/app_snackbar.dart';
 
+/*
+  Ficheiro: pick_location_page.dart
+  Propósito: Página para seleccionar um ponto e raio no mapa (usada no formulário de tarefa).
+
+  Resumo:
+  - Permite ao utilizador tocar para escolher um ponto, ajustar o raio e guardar.
+  - Tenta centrar na posição do utilizador quando possível.
+  - Retorna um `PickLocationResult` com ponto e raio para a página chamadora.
+*/
+
 class PickLocationArgs {
   final LatLng? initialPoint;
   final double initialRadius;
@@ -121,7 +131,7 @@ class _PickLocationPageState extends State<PickLocationPage> {
           ),
 
           // Botões flutuantes alinhados com o +/-
-          // Use the same sized control as the main MapPage for visual parity
+          // Use um controle do mesmo tamanho que o MapPage principal para manter a paridade visual.
           Positioned(
             right: 16,
             bottom: 110,

@@ -1,9 +1,3 @@
-// The original edit_user_page.dart was corrupted during edits. To restore
-// a working analyzer and compile state, this file now exports the new
-// implementation located in `edit_user_page_new.dart`.
-
-// Consolidated implementation of EditUserPage moved here from edit_user_page_new.dart
-// to remove intermediary duplicates and simplify the codebase.
 
 import 'dart:io';
 
@@ -18,6 +12,28 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/auth_store.dart';
 import '../../widgets/app_snackbar.dart';
 import '../../widgets/confirm_dialog.dart';
+
+/*
+	Ficheiro: edit_user_page.dart
+	Propósito: Página para editar os dados da conta do utilizador.
+
+	Descrição sucinta:
+	- Permite ao utilizador alterar o nome de utilizador e o avatar (imagem).
+	- Suporta seleccionar imagem da galeria, tirar fotografia ou remover o avatar.
+	- Guarda o caminho do avatar em SharedPreferences com a chave 'avatar_<userId>'.
+	- Inclui ações para alterar password (encaminha para reset) e apagar a conta
+		(com confirmação e pedido da password).
+
+	Notas técnicas importantes:
+	- Todas as operações assíncronas verificam `mounted` antes de usar `context`
+		ou actualizar o estado, evitando erros se o widget for descartado.
+	- Os ficheiros temporários do avatar são gravados na pasta de documentos da
+		aplicação e removidos quando substituídos ou descartados.
+
+	Linguagem: comentários em Português de Portugal (novo acordo ortográfico),
+	concisos e orientados para entrega académica.
+*/
+
 
 class EditUserPage extends StatefulWidget {
 	const EditUserPage({super.key});
@@ -102,7 +118,8 @@ class _EditUserPageState extends State<EditUserPage> {
 			final dest = File(p.join(dir.path, filename));
 			await dest.writeAsBytes(bytes);
 
-				// Ensure widget still mounted after awaiting file operations before using context/state
+				// Verifica que o widget ainda está montado depois de operações
+				// assíncronas antes de aceder ao `context` ou actualizar o estado.
 				if (!mounted) return;
 				setState(() {
 					_avatarFile = dest;
@@ -129,7 +146,7 @@ class _EditUserPageState extends State<EditUserPage> {
 	Future<void> _save() async {
 		if (!(_formKey.currentState?.validate() ?? false)) return;
 		setState(() => _saving = true);
-		try {
+			try {
 			final auth = context.read<AuthStore>();
 			final user = auth.currentUser;
 			if (user == null) throw Exception('No user');
@@ -139,7 +156,9 @@ class _EditUserPageState extends State<EditUserPage> {
 				final prefs = await SharedPreferences.getInstance();
 				final key = 'avatar_${user.id}';
 
-				// Handle staged removal
+				// Tratar remoção staged do avatar:
+				// - apagar o ficheiro antigo (se existir)
+				// - remover a chave correspondente em SharedPreferences
 				if (_avatarRemovedStaged) {
 					final orig = _originalAvatarPath ?? prefs.getString(key);
 					if (orig != null) {
@@ -153,7 +172,9 @@ class _EditUserPageState extends State<EditUserPage> {
 					_avatarRemovedStaged = false;
 				}
 
-				// Handle staged new avatar
+				// Tratar novo avatar staged:
+				// - actualizar SharedPreferences com o novo caminho
+				// - eliminar o ficheiro antigo se for diferente do actual
 				if (_avatarFile != null) {
 					final current = _originalAvatarPath ?? prefs.getString(key);
 					if (current == null || current != _avatarFile!.path) {
@@ -169,7 +190,8 @@ class _EditUserPageState extends State<EditUserPage> {
 				}
 			} catch (_) {}
 
-			// Avoid using BuildContext after async gaps if widget was disposed.
+			// Evitar usar `BuildContext` após operações assíncronas se o widget
+			// tiver sido descartado. Verificar `mounted` acima.
 			if (!mounted) return;
 			_originalUsername = _usernameCtrl.text.trim();
 			setState(() {
@@ -199,7 +221,7 @@ class _EditUserPageState extends State<EditUserPage> {
 		title: 'Confirme com a sua password', label: 'Password', confirmLabel: 'Apagar');
 	if (!mounted) return;
 	if (password == null) return;
-		try {
+			try {
 			final ok = await auth.deleteAccountWithPassword(password);
 			// Ensure we're still mounted before using context-derived APIs
 			if (!mounted) return;
@@ -223,7 +245,7 @@ class _EditUserPageState extends State<EditUserPage> {
 
 	Future<void> _discardStagedChanges() async {
 		try {
-			// remove staged file if it is different to original
+			// Remover ficheiro staged se for diferente do original
 			if (_avatarFile != null && (_originalAvatarPath == null || _avatarFile!.path != _originalAvatarPath)) {
 				try {
 					final f = File(_avatarFile!.path);
@@ -231,7 +253,7 @@ class _EditUserPageState extends State<EditUserPage> {
 				} catch (_) {}
 			}
 
-			// restore original avatar if present
+			// Restaurar avatar original se existir
 			if (_originalAvatarPath != null) {
 				final f = File(_originalAvatarPath!);
 				if (await f.exists()) {
@@ -243,7 +265,7 @@ class _EditUserPageState extends State<EditUserPage> {
 				if (mounted) setState(() => _avatarFile = null);
 			}
 
-			// restore username
+			// Restaurar nome de utilizador original
 			if (_originalUsername != null) {
 				_usernameCtrl.text = _originalUsername!;
 			}

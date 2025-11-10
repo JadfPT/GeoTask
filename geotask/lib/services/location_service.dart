@@ -3,11 +3,20 @@ import 'dart:io';
 import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Thin wrapper around `geolocator` used by the app.
-///
-/// Purpose:
-/// - centralize permission handling and common location calls,
-/// - provide a single place to tune `LocationSettings` for the app.
+/*
+  Ficheiro: location_service.dart
+  Propósito: Wrapper fino em torno de `geolocator` para centralizar
+  permissões e chamadas de localização.
+
+  Notas úteis:
+  - `ensurePermissions` tenta seguir o fluxo recomendado pelo Geolocator
+    e, em Android, também solicita permissão de localização em background
+    quando necessário. Chamadores devem tratar casos de "permissão
+    permanentemente negada" e orientar o utilizador para as definições do SO.
+  - `currentPosition` encapsula as `LocationSettings` usadas pela app.
+*/
+
+/// Wrapper que centraliza permissões e chamadas de localização.
 class LocationService {
   /// Ensure the app has location permissions. If denied, this will prompt
   /// the user. Note: callers should handle permanently denied states and

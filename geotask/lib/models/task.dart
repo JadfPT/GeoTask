@@ -1,3 +1,15 @@
+/*
+  Ficheiro: task.dart
+  Propósito: Modelo `Task` que representa uma tarefa com apoio a localização.
+
+  Pontos-chave:
+  - Suporta tanto o campo legacy `category` (string única) como o novo
+    `categories` (lista até 3 nomes), mantendo compatibilidade.
+  - `point` usa `LatLng` do Google Maps; `radiusMeters` define a geofence.
+  - Serialização `toJson` / `fromJson` trata formatos variados (mapa de
+    ponto, lista ou string de categorias) para robustez.
+*/
+
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class Task {
@@ -80,6 +92,7 @@ class Task {
             ? null
             : {'lat': point!.latitude, 'lng': point!.longitude},
         'radiusMeters': radiusMeters,
+        // Mantém ambos os campos para compatibilidade com versões antigas
         'category': category,     // legacy
         'categories': categories, // novo
         'ownerId': ownerId,
@@ -90,6 +103,7 @@ class Task {
     LatLng? p;
     final jp = json['point'];
     if (jp is Map) {
+      // Aceita chaves lat/lng ou latitude/longitude para maior robustez
       final lat = (jp['lat'] ?? jp['latitude'])?.toDouble();
       final lng = (jp['lng'] ?? jp['longitude'])?.toDouble();
       if (lat != null && lng != null) p = LatLng(lat, lng);
@@ -100,6 +114,7 @@ class Task {
     if (jc is List) {
       cats = jc.whereType<String>().toList();
     } else if (jc is String) {
+      // Se recebeu uma string, tentar parse por vírgulas (compatibilidade)
       cats = jc.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
     }
 

@@ -6,12 +6,29 @@ import 'router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'theme/app_theme.dart';
 
-/// GeoTasksApp is the root widget for the application. It expects to be
-/// wrapped by [AppProviders] which expose the required stores (Auth/Theme).
+/*
+  Cabeçalho: app.dart
+  Propósito: Widget raiz da aplicação.
+
+  Resumo:
+  - Define o widget principal `GeoTasksApp` que usa `MaterialApp.router` e
+    configura o enrutamento (GoRouter) e o tema.
+  - O widget é concebido para ser envolvido por `AppProviders`, que expõem
+    stores como `AuthStore` e `ThemeController`.
+
+  Observações:
+  - O `GoRouter` é criado preguiçosamente e mantido em cache; é forçado a
+    reavaliar redirects através de um `ValueNotifier` quando o estado de
+    autenticação muda.
+*/
+
+/// `GeoTasksApp` é o widget raiz da aplicação. Deve ser envolvido por
+/// `AppProviders` que expõem os stores necessários (ex.: Auth/Theme).
 ///
-/// Responsibilities:
-/// - Create and cache the app [GoRouter] instance.
-/// - Listen to auth changes and notify the router to re-evaluate redirects.
+/// Responsabilidades principais:
+/// - Criar e manter o `GoRouter` da aplicação.
+/// - Ouvir mudanças de autenticação e notificar o router para reavaliar
+///   redireccionamentos sem recriar o router.
 class GeoTasksApp extends StatefulWidget {
   const GeoTasksApp({super.key});
 
@@ -36,7 +53,8 @@ class _GeoTasksAppState extends State<GeoTasksApp> {
   }
 
   void _onAuthChanged() {
-    // notify go_router to re-evaluate redirects by changing the notifier value
+    // Notificar o go_router para reavaliar redireccionamentos alterando o
+    // valor do notifier (força o refresh sem recriar o router).
     _routerRefresh.value = _routerRefresh.value + 1;
   }
 

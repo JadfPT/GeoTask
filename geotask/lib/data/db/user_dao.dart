@@ -2,10 +2,20 @@ import 'package:sqflite/sqflite.dart';
 import 'database_helper.dart';
 import '../../models/user.dart';
 
-/// Data Access Object for `users` table.
-///
-/// Encapsulates all user-related database operations so higher-level stores
-/// (e.g. `AuthStore`) don't need to execute raw SQL.
+/*
+  Ficheiro: user_dao.dart
+  Propósito: DAO para a tabela `users`.
+
+  Descrição:
+  - Encapsula operações CRUD sobre utilizadores para que stores (ex.:
+    `AuthStore`) não executem SQL directo.
+  - Opera sobre representações simples (Map) produzidas por `User.toRow()` e
+    consumidas por `User.fromRow()`.
+*/
+
+/// DAO para a tabela `users`.
+/// Fornece operações assíncronas para inserir, procurar, actualizar e
+/// eliminar utilizadores.
 class UserDao {
   UserDao._();
   static final instance = UserDao._();

@@ -16,7 +16,16 @@ import '../../widgets/app_snackbar.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 
-/// Dev options extracted from settings to keep the SettingsPage file smaller.
+/*
+  Ficheiro: dev_tools.dart
+  Propósito: Opções de desenvolvimento acessíveis a partir de Definições (quando desbloqueadas).
+
+  Resumo:
+  - Ferramentas para testar notificações, limpar dados, semear dados de exemplo,
+    resetar notificações e simular localização.
+  - Destinado apenas a testes locais; contém ações potencialmente destrutivas.
+*/
+
 class DevOptions extends StatelessWidget {
   final VoidCallback? onHideDev;
 
@@ -34,7 +43,7 @@ class DevOptions extends StatelessWidget {
         ),
         const SizedBox(height: 8),
 
-        // Test notification
+        // Notificação de teste
         AppCard(
           leading: const Icon(Icons.notifications_active),
           title: const Text('Testar notificações'),
@@ -58,7 +67,7 @@ class DevOptions extends StatelessWidget {
         ),
 
         const SizedBox(height: 8),
-        // Clear all user data
+        // Limpar todos os dados do utilizador
         AppCard(
           leading: const Icon(Icons.delete_forever),
           title: const Text('Limpar dados da conta'),
@@ -91,7 +100,7 @@ class DevOptions extends StatelessWidget {
         ),
 
         const SizedBox(height: 8),
-        // Reset notifications
+        // Reset notificações
         AppCard(
           leading: const Icon(Icons.notifications_off),
           title: const Text('Reset notificações'),
@@ -110,8 +119,8 @@ class DevOptions extends StatelessWidget {
             try {
               await TaskDao.instance.clearLastNotifiedForOwner(userId);
               await tasks.loadFromDb(ownerId: userId);
-              // Also reset in-memory geofence watcher state so location-based
-              // notifications are fully cleared.
+              // Também redefine o estado do observador de geofence na memória para que as notificações baseadas em localização
+              // sejam completamente apagadas.
               await GeofenceWatcher.instance.resetForStore(tasks);
               if (context.mounted) showAppSnackBar(context, 'Notificações resetadas');
             } catch (e) {
@@ -121,7 +130,7 @@ class DevOptions extends StatelessWidget {
         ),
 
         const SizedBox(height: 8),
-        // Seed demo data
+        // Semear dados de exemplo
         AppCard(
           leading: const Icon(Icons.auto_awesome),
           title: const Text('Criar tarefas de exemplo'),
@@ -156,7 +165,7 @@ class DevOptions extends StatelessWidget {
         ),
 
         const SizedBox(height: 8),
-        // Simulate location
+        // Simular localização
         AppCard(
           leading: const Icon(Icons.my_location),
           title: const Text('Simular localização'),

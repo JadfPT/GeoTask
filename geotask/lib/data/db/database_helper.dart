@@ -3,9 +3,27 @@ import 'dart:io';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
-/// DatabaseHelper is a singleton that manages opening the SQLite database and
-/// applying migrations. Use `DatabaseHelper.instance.database` to obtain a
-/// ready-to-use [Database] instance.
+/*
+  Ficheiro: database_helper.dart
+  Propósito: Inicialização e migração do esquema SQLite da aplicação.
+
+  Descrição:
+  - Fornece um singleton `DatabaseHelper.instance` com getter `database`
+    que garante a criação/abertura e aplicação de migrações necessárias.
+  - Mantém a versão do esquema em `_dbVersion`. As migrações em `_onUpgrade`
+    são idempotentes e seguras para execução ao arranque.
+
+  Observações importantes para o professor:
+  - Colunas adicionadas em migrações usam `try/catch` para serem seguras
+    caso a coluna já exista (compatibilidade com versões anteriores).
+  - Os tipos armazenados no esquema refletem como os DAOs persistem campos
+    (ex.: `lastNotifiedAt` como INTEGER em epoch ms; `categories` pode ser
+    JSON armazenado em TEXT).
+*/
+
+/// DatabaseHelper é um singleton que gere a abertura da base de dados SQLite
+/// e a aplicação de migrações. Use `DatabaseHelper.instance.database` para
+/// obter um handle [Database] pronto a usar.
 class DatabaseHelper {
   DatabaseHelper._privateConstructor();
   static final DatabaseHelper instance = DatabaseHelper._privateConstructor();

@@ -4,21 +4,32 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../models/task.dart';
 import 'db/task_dao.dart';
 
-/// TaskStore maintains an in-memory list of tasks and persists changes via
-/// [TaskDao]. The store exposes simple methods for add/update/delete and a
-/// load method to initialize state from the database.
+/*
+  Ficheiro: task_store.dart
+  Propósito: Store que gere a lista de tarefas em memória e persiste através do TaskDao.
+
+  Descrição:
+  - Mantém uma lista interna `_items` e expõe operações para adicionar,
+    actualizar, remover e carregar tarefas do DB.
+  - As operações persistentes são executadas antes de actualizar a lista em
+    memória quando relevante, para reduzir divergência entre UI e BD.
+  - Fornece métodos utilitários como `seed` para popular exemplos e
+    `markTaskNotified` para registar quando uma notificação foi enviada.
+*/
+
+/// Store responsável por operações CRUD simples sobre tarefas.
 class TaskStore extends ChangeNotifier {
   final List<Task> _items = [];
   List<Task> get items => List.unmodifiable(_items);
 
-  /// Insert a new task and persist it. Notifies listeners after insertion.
+  /// Insere uma nova tarefa e a persiste. Notifica os ouvintes após a inserção.
   Future<void> add(Task t) async {
     await TaskDao.instance.insert(t);
     _items.insert(0, t);
     notifyListeners();
   }
 
-  /// Update a task (if present) and persist the changes.
+  /// Atualiza uma tarefa (se houver) e persiste as alterações.
   Future<void> update(Task t) async {
     final i = _items.indexWhere((e) => e.id == t.id);
     if (i >= 0) {
@@ -28,7 +39,7 @@ class TaskStore extends ChangeNotifier {
     }
   }
 
-  /// Toggle the `done` state for the task with [id] and persist the update.
+  /// Alterna o estado `done` da tarefa com [id] e persiste a atualização.
   Future<void> toggleDone(String id) async {
     final i = _items.indexWhere((e) => e.id == id);
     if (i >= 0) {
@@ -40,16 +51,16 @@ class TaskStore extends ChangeNotifier {
     }
   }
 
-  /// Remove a task by id and persist deletion.
+  /// Remove uma tarefa pelo id e persiste a eliminação.
   Future<void> remove(String id) async {
-    // Persist deletion first. If the DB operation fails we keep the in-memory
-    // item to avoid UI/DB divergence.
+    // Persiste a eliminação primeiro. Se a operação na BD falhar, mantemos o
+    // item em memória para evitar divergência entre UI e BD.
     await TaskDao.instance.delete(id);
     _items.removeWhere((e) => e.id == id);
     notifyListeners();
   }
 
-  /// Seed example tasks if the store is empty.
+  /// Semeia tarefas de exemplo se a store estiver vazia.
   Future<void> seed() async {
     if (_items.isNotEmpty) return;
     final now = DateTime.now();
@@ -73,7 +84,7 @@ class TaskStore extends ChangeNotifier {
 
   String _genId() => DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(999).toString();
 
-  /// Initialize store by loading tasks from DB. Call this after provider creation if needed.
+  /// Inicializa o armazenamento carregando tarefas da base de dados. Chama este método após a criação do provedor, se necessário.
   Future<void> loadFromDb({String? ownerId}) async {
     final items = await TaskDao.instance.getAllForOwner(ownerId);
     _items
@@ -82,9 +93,9 @@ class TaskStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Mark a task as having sent a notification at [when]. Persists the change
-  /// and updates the in-memory item. Useful to deduplicate notifications
-  /// across app restarts.
+  /// Marca uma tarefa como tendo enviado uma notificação em [when]. Persiste a alteração
+  /// e atualiza o item em memória. Útil para evitar notificações duplicadas
+  /// após reinícios da aplicação.
   Future<void> markTaskNotified(String id, DateTime when) async {
     final i = _items.indexWhere((e) => e.id == id);
     if (i < 0) return;

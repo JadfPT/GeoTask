@@ -2,20 +2,28 @@ import 'dart:math';
 import '../data/db/user_dao.dart';
 import 'notification_service.dart';
 
+/*
+  Ficheiro: password_reset_service.dart
+  Propósito: Serviço simples em memória para simular envio de códigos de
+  recuperação de password para testes locais.
+
+  Funcionamento:
+  - `sendCode(email)` gera um código de 4 dígitos e envia como notificação
+    local (simula um email). Requer `NotificationService.init()`.
+  - `verifyCode(email, code)` valida o código e verifica expiração.
+  - Os códigos têm um TTL configurável (por defeito 10 minutos).
+
+  Nota de segurança: este mecanismo é apenas para desenvolvimento/local.
+  Em produção, o envio e validação devem ser feitos por um serviço seguro
+  (e.g. email real com código temporário no servidor).
+*/
+
 class _CodeEntry {
   final String code;
   final DateTime expiresAt;
   _CodeEntry(this.code, this.expiresAt);
 }
 
-/// Simple in-memory password reset code service used to simulate an email
-/// verification flow for local testing.
-///
-/// Usage:
-/// - call `sendCode(email)` to generate a 4-digit code and send it as a
-///   local notification (requires NotificationService.init() beforehand).
-/// - call `verifyCode(email, code)` to check the submitted code.
-/// - codes expire after [codeTtlMinutes].
 class PasswordResetService {
   PasswordResetService._();
   static final PasswordResetService instance = PasswordResetService._();
@@ -24,7 +32,7 @@ class PasswordResetService {
   final int codeTtlMinutes = 10;
 
   Future<void> sendCode(String email) async {
-    // ensure the user exists locally
+    // garantir que o utilizador existe localmente
     final user = await UserDao.instance.getByEmail(email);
     if (user == null) throw Exception('User not found');
 
@@ -33,7 +41,7 @@ class PasswordResetService {
     final expires = DateTime.now().add(Duration(minutes: codeTtlMinutes));
     _codes[email] = _CodeEntry(code, expires);
 
-    // send as a local notification so we can simulate email delivery.
+    // enviar código de verificação como notificação local para simular entrega por email.
     await NotificationService.instance.show(
       id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
       title: 'GeoTask — Código de verificação',
@@ -41,7 +49,7 @@ class PasswordResetService {
     );
   }
 
-  /// Verify code for [email]. Returns true if valid and not expired.
+  /// Verificar código para [email]. Retorna true se válido e não expirado.
   bool verifyCode(String email, String code) {
     final e = _codes[email];
     if (e == null) return false;

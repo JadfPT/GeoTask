@@ -17,6 +17,16 @@ class ResetPasswordPage extends StatefulWidget {
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
+
+/*
+  Ficheiro: reset_password_page.dart
+  Propósito: Fluxo de recuperação de password.
+
+  Resumo:
+  - Envia um código (simulado via `PasswordResetService`) e valida o código introduzido.
+  - Permite definir uma nova password após verificação.
+  - Inclui cooldown para reenvio e mensagens UX apropriadas para avaliação.
+*/
 }
 
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
@@ -34,7 +44,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   bool _showNew = false;
   bool _showConfirm = false;
 
-  // resend cooldown
+  // cooldown de reenvio
   Timer? _resendTimer;
   int _resendRemaining = 0;
   static const int _resendCooldownSeconds = 30;
@@ -52,12 +62,12 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void initState() {
     super.initState();
-    // If the page was given an initial email, prefill and optionally auto-send the code.
+    // Se a página recebeu um email inicial, preenche e opcionalmente envia o código automaticamente.
     final widgetEmail = widget.initialEmail;
     if (widgetEmail != null && widgetEmail.isNotEmpty) {
       _emailCtrl.text = widgetEmail;
       if (widget.autoSend) {
-        // delay slightly to allow build to complete
+        // atraso ligeiro para permitir que a construção seja concluída
         WidgetsBinding.instance.addPostFrameCallback((_) => _sendCode());
       }
     }

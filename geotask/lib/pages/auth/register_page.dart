@@ -11,6 +11,16 @@ import '../../widgets/app_snackbar.dart';
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
 
+/*
+  Ficheiro: register_page.dart
+  Propósito: Formulário de registo de novo utilizador.
+
+  Resumo:
+  - Valida username, email e password; cria conta via `AuthStore`.
+  - Inicializa stores dependentes (categorias e tarefas) após registo.
+  - Mostra mensagens de erro curtas e apropriadas para avaliação académica.
+*/
+
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -45,7 +55,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final pass = _passCtrl.text;
 
       final user = await auth.register(username, email, pass);
-      // initialize user-scoped stores
+      // inicializa stores dependentes do utilizador
       await cats.load(user.id);
       await tasks.loadFromDb(ownerId: user.id);
       if (mounted) {
@@ -57,7 +67,7 @@ class _RegisterPageState extends State<RegisterPage> {
         if (msg.contains('UNIQUE constraint failed') || msg.toLowerCase().contains('unique')) {
           showAppSnackBar(context, 'Já existe uma conta com este email.');
         } else {
-          // Show a shortened, single-line error to avoid huge DB dumps in UI
+          // Mostra um erro curto, numa única linha, para evitar grandes despejos de BD na UI
           showAppSnackBar(context, 'Erro: ${msg.split('\n').first}');
         }
       }
@@ -74,7 +84,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // Gradient background
+          // Fundo em gradiente
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

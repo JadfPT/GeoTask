@@ -8,9 +8,26 @@ import 'db/user_dao.dart';
 import 'db/task_dao.dart';
 import '../models/user.dart';
 
-/// AuthStore manages the current authenticated user (or guest), registration,
-/// login and account lifecycle. This store uses DAOs for all persistence so it
-/// does not execute raw SQL directly.
+/*
+  Ficheiro: auth_store.dart
+  Propósito: Store responsável pela autenticação e ciclo de vida da conta.
+
+  Resumo:
+  - Mantém o utilizador actual (ou guest) em memória e persiste o id no
+    SharedPreferences.
+  - Expõe operações de registo, login, logout, criação de guest, eliminação
+    de conta e migração de dados de guest para conta permanente.
+  - Usa DAOs para todas as operações de persistência (UserDao, TaskDao,
+    CategoryDao), evitando SQL directo no store.
+
+  Pontos importantes para o professor:
+  - A password nunca é guardada em texto; é guardado um hash produzido por
+    `hashPasswordPbkdf2` (ver `password_utils.dart`).
+  - Operações que removem dados tentam recuperar de excepções silenciosamente
+    para evitar travamentos na UI (catch {}).
+*/
+
+/// Store que gere o estado de autenticação e contas.
 class AuthStore extends ChangeNotifier {
   User? _currentUser;
   User? get currentUser => _currentUser;
@@ -41,6 +58,7 @@ class AuthStore extends ChangeNotifier {
     await UserDao.instance.insertUser(user);
     await _setCurrentUser(user);
     // If previously a guest, migrate guest data to the new user
+    // Se existia uma conta guest, migrar tarefas e categorias para a nova conta
     if (prevGuestId != null) {
       await migrateGuestToUser(prevGuestId, user.id);
     }

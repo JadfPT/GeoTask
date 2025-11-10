@@ -2,28 +2,22 @@ import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-/// Notification helper that wraps `flutter_local_notifications`.
-///
-/// Responsibilities:
-/// - initialize platform channels and request platform permissions (Android
-///   notification permission / iOS notification permission),
-/// - expose a simple `show(...)` API for sending local notifications.
-///
-/// Usage:
-/// ```dart
-/// // initialise early in app start (e.g. main)
-/// await NotificationService.instance.init();
-///
-/// // later
-/// NotificationService.instance.show(id: 1, title: 'Olá', body: 'Exemplo');
-/// ```
-///
-/// Platform notes:
-/// - Android: ensure `AndroidManifest.xml` contains the notification permission
-///   and any required metadata; on Android 13+ a runtime permission is requested
-///   via `permission_handler`.
-/// - iOS: register for permissions and add necessary entitlements if using
-///   advanced features like attachments.
+/*
+  Ficheiro: notification_service.dart
+  Propósito: Wrapper em torno de `flutter_local_notifications` para gerir
+  notificações locais de forma centralizada.
+
+  Descrição:
+  - Inicializa canais/plataformas e pede permissões onde aplicável.
+  - Exponibiliza `show(...)` para enviar notificações locais simples.
+
+  Observações:
+  - No Android 13+ é necessário pedir a permissão de notificações em runtime
+    (aqui feito com `permission_handler`).
+  - O `channel` e icon devem ser correctamente configurados para que as
+    notificações apareçam conforme esperado.
+*/
+
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
