@@ -73,108 +73,121 @@ class _RegisterPageState extends State<RegisterPage> {
     final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Logo
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.asset('assets/icon.png', width: 120, height: 120),
-                ),
-                const SizedBox(height: 16),
-                Text('GeoTask', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Text('Gerencie as suas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
-                const SizedBox(height: 24),
+        child: Stack(
+          children: [
+            // Back button top-left
+            Positioned(
+              top: 8,
+              left: 4,
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => context.go('/login'),
+              ),
+            ),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Logo
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.asset('assets/icon.png', width: 120, height: 120),
+                    ),
+                    const SizedBox(height: 16),
+                    Text('GeoTask', style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text('Gerencie as suas tarefas por localização', style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+                    const SizedBox(height: 24),
 
-                Card(
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        children: [
-                          TextFormField(
-                            controller: _usernameCtrl,
-                            decoration: const InputDecoration(labelText: 'Username'),
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Username é obrigatório.';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _emailCtrl,
-                            decoration: const InputDecoration(labelText: 'Email'),
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (v) {
-                              if (v == null || v.trim().isEmpty) return 'Email é obrigatório.';
-                              if (!isValidEmail(v.trim())) return 'Email inválido.';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _passCtrl,
-                            decoration: InputDecoration(
-                              labelText: 'Password',
-                              suffixIcon: IconButton(
-                                icon: Icon(_showPass ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _showPass = !_showPass),
+                    Card(
+                      elevation: 6,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            children: [
+                              TextFormField(
+                                controller: _usernameCtrl,
+                                decoration: const InputDecoration(labelText: 'Username'),
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Username é obrigatório.';
+                                  return null;
+                                },
                               ),
-                            ),
-                            obscureText: !_showPass,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Password é obrigatória.';
-                              if (v.length < 4) return 'Password demasiado curta.';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _confirmCtrl,
-                            decoration: InputDecoration(
-                              labelText: 'Confirmar Password',
-                              suffixIcon: IconButton(
-                                icon: Icon(_showConfirm ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _showConfirm = !_showConfirm),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _emailCtrl,
+                                decoration: const InputDecoration(labelText: 'Email'),
+                                keyboardType: TextInputType.emailAddress,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return 'Email é obrigatório.';
+                                  if (!isValidEmail(v.trim())) return 'Email inválido.';
+                                  return null;
+                                },
                               ),
-                            ),
-                            obscureText: !_showConfirm,
-                            validator: (v) {
-                              if (v == null || v.isEmpty) return 'Confirma a password.';
-                              if (v != _passCtrl.text) return 'As passwords não coincidem.';
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: theme.colorScheme.primary,
-                                foregroundColor: theme.colorScheme.onPrimary,
-                                elevation: 4,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _passCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(_showPass ? Icons.visibility_off : Icons.visibility),
+                                    onPressed: () => setState(() => _showPass = !_showPass),
+                                  ),
+                                ),
+                                obscureText: !_showPass,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return 'Password é obrigatória.';
+                                  if (v.length < 4) return 'Password demasiado curta.';
+                                  return null;
+                                },
                               ),
-                              onPressed: _loading ? null : _submit,
-                              child: _loading ? const SizedBox(width:20, height:20, child:CircularProgressIndicator(strokeWidth:2)) : const Text('Registar'),
-                            ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _confirmCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Confirmar Password',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(_showConfirm ? Icons.visibility_off : Icons.visibility),
+                                    onPressed: () => setState(() => _showConfirm = !_showConfirm),
+                                  ),
+                                ),
+                                obscureText: !_showConfirm,
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) return 'Confirme a password.';
+                                  if (v != _passCtrl.text) return 'As passwords não coincidem.';
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.primary,
+                                    foregroundColor: theme.colorScheme.onPrimary,
+                                    elevation: 4,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                                  ),
+                                  onPressed: _loading ? null : _submit,
+                                  child: _loading ? const SizedBox(width:20, height:20, child:CircularProgressIndicator(strokeWidth:2)) : const Text('Registar'),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
