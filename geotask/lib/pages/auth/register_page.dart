@@ -81,8 +81,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  theme.colorScheme.primaryContainer.withOpacity(0.12),
-                  theme.colorScheme.primary.withOpacity(0.05),
+                  theme.colorScheme.primaryContainer.withAlpha((0.12 * 255).round()),
+                  theme.colorScheme.primary.withAlpha((0.05 * 255).round()),
                 ],
               ),
             ),
@@ -109,7 +109,7 @@ class _RegisterPageState extends State<RegisterPage> {
                           height: 140,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(32),
-                            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.22), blurRadius: 12, offset: const Offset(0,6))],
+                            boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.22 * 255).round()), blurRadius: 12, offset: const Offset(0,6))],
                           ),
                           child: ClipRRect(borderRadius: BorderRadius.circular(32), child: Image.asset('assets/icon.png', fit: BoxFit.cover)),
                         ),
@@ -121,9 +121,9 @@ class _RegisterPageState extends State<RegisterPage> {
 
                         Container(
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.surface.withOpacity(0.06),
+                            color: theme.colorScheme.surface.withAlpha((0.06 * 255).round()),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: theme.colorScheme.surfaceVariant.withOpacity(0.08)),
+                            border: Border.all(color: theme.colorScheme.surfaceContainerHighest.withAlpha((0.08 * 255).round())),
                           ),
                           padding: const EdgeInsets.all(18),
                           child: Form(

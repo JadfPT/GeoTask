@@ -90,8 +90,8 @@ class _LoginPageState extends State<LoginPage> {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  theme.colorScheme.primaryContainer.withOpacity(0.14),
-                  theme.colorScheme.primary.withOpacity(0.06),
+                  theme.colorScheme.primaryContainer.withAlpha((0.14 * 255).round()),
+                  theme.colorScheme.primary.withAlpha((0.06 * 255).round()),
                 ],
               ),
             ),
@@ -110,7 +110,7 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(32),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 18, offset: const Offset(0, 8)),
+                          BoxShadow(color: Colors.black.withAlpha((0.25 * 255).round()), blurRadius: 18, offset: const Offset(0, 8)),
                         ],
                       ),
                       child: ClipRRect(
@@ -130,9 +130,9 @@ class _LoginPageState extends State<LoginPage> {
                     // Translucent form card
                     Container(
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surface.withOpacity(0.06),
+                        color: theme.colorScheme.surface.withAlpha((0.06 * 255).round()),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: theme.colorScheme.surfaceVariant.withOpacity(0.08)),
+                        border: Border.all(color: theme.colorScheme.surfaceContainerHighest.withAlpha((0.08 * 255).round())),
                       ),
                       padding: const EdgeInsets.all(18),
                       child: Form(
