@@ -11,6 +11,7 @@ import '../../models/task.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../services/notification_service.dart';
+import '../../services/geofence_watcher.dart';
 import '../../widgets/app_snackbar.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -109,6 +110,9 @@ class DevOptions extends StatelessWidget {
             try {
               await TaskDao.instance.clearLastNotifiedForOwner(userId);
               await tasks.loadFromDb(ownerId: userId);
+              // Also reset in-memory geofence watcher state so location-based
+              // notifications are fully cleared.
+              await GeofenceWatcher.instance.resetForStore(tasks);
               if (context.mounted) showAppSnackBar(context, 'Notificações resetadas');
             } catch (e) {
               if (context.mounted) showAppSnackBar(context, 'Erro ao resetar notificações: ${e.toString()}');

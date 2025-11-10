@@ -78,6 +78,37 @@ class GeofenceWatcher {
     ).listen((p) => _onPosition(p, store));
   }
 
+  /// Clear in-memory geofence state used for deduplication and enter/exit
+  /// detection. This does not modify persisted `lastNotifiedAt` values in
+  /// the database; use `TaskDao.clearLastNotifiedForOwner` for that.
+  ///
+  /// If a [store] is provided we will try to seed the `_inside` map using
+  /// the last known position so subsequent enter/exit events are accurate.
+  Future<void> resetForStore(TaskStore? store) async {
+    _notifiedToday.clear();
+    _inside.clear();
+
+    if (store == null) return;
+
+    try {
+      final pos = await Geolocator.getLastKnownPosition();
+      if (pos == null) return;
+      for (final t in store.items) {
+        if (t.done || t.point == null || t.radiusMeters <= 0) {
+          _inside[t.id] = false;
+          continue;
+        }
+        final d = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude,
+          t.point!.latitude, t.point!.longitude,
+        );
+        _inside[t.id] = d <= t.radiusMeters;
+      }
+    } catch (_) {
+      // ignore errors; best-effort seeding only
+    }
+  }
+
   /// Stop watching location updates.
   void stop() { _sub?.cancel(); _sub = null; }
 
