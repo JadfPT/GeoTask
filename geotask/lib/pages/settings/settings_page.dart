@@ -4,7 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../services/notification_service.dart';
+// notification_service is used by dev tools; keep import in dev_tools.dart instead
 import '../../data/auth_store.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/app_snackbar.dart';
@@ -12,6 +12,7 @@ import '../../widgets/app_card.dart';
 
 
 import 'about_sheet.dart';
+import 'dev_tools.dart';
 import '../../theme/app_theme.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -118,7 +119,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 initials = parts.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').take(2).join();
               }
               return CircleAvatar(
-                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.16),
+                backgroundColor: Theme.of(context).colorScheme.primary.withAlpha((0.16 * 255).round()),
                 child: initials.isEmpty ? const Icon(Icons.person_outline, color: Colors.white) : Text(initials, style: const TextStyle(color: Colors.white)),
               );
             }),
@@ -194,59 +195,17 @@ class _SettingsPageState extends State<SettingsPage> {
             onTap: () => _openAppSettings(context),
           ),
           // Dev section: visible only when unlocked for the current user
-          if (_devUnlocked) ...[
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Text('Dev', style: Theme.of(context).textTheme.titleMedium),
-            ),
-            const SizedBox(height: 8),
-            AppCard(
-              leading: const Icon(Icons.notifications_active),
-              title: const Text('Testar notificação (dev)'),
-              subtitle: const Text('Envia uma notificação de teste ao sistema'),
-              onTap: () async {
-                // Ensure runtime permission is requested on Android 13+
-                final status = await Permission.notification.status;
-                if (!status.isGranted) {
-                  final r = await Permission.notification.request();
-                  if (!r.isGranted) {
-                    if (context.mounted) showAppSnackBar(context, 'Permissão de notificações não concedida');
-                    return;
-                  }
-                }
-
-                try {
-                  await NotificationService.instance.show(id: 999999, title: 'Teste GeoTask', body: 'Isto é uma notificação de teste');
-                  if (context.mounted) showAppSnackBar(context, 'Notificação enviada (verifica a área de sistema)');
-                } catch (e) {
-                  if (context.mounted) showAppSnackBar(context, 'Erro ao enviar notificação: ${e.toString()}');
-                }
-              },
-            ),
-
-            // Allow the user to hide dev options again for the current user
-            const SizedBox(height: 8),
-            AppCard(
-              leading: const Icon(Icons.lock),
-              title: const Text('Ocultar opções de desenvolvimento'),
-              subtitle: const Text('Reverter o desbloqueio para este utilizador'),
-              onTap: () async {
-                // capture messenger synchronously to avoid using BuildContext after await
-                final messenger = ScaffoldMessenger.of(context);
-                try {
-                  await _setDevUnlocked(false);
-                  if (!mounted) return;
-                  setState(() {
-                    _devUnlocked = false;
-                  });
-                  messenger.showSnackBar(const SnackBar(content: Text('Opções de desenvolvimento ocultadas')));
-                } catch (_) {
-                  if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Erro ao ocultar opções de desenvolvimento')));
-                }
-              },
-            ),
-          ],
+          if (_devUnlocked)
+            DevOptions(onHideDev: () {
+              // Persist hidden state and update UI; we don't await here because
+              // DevOptions expects a synchronous callback. _setDevUnlocked is
+              // asynchronous but will complete shortly.
+              _setDevUnlocked(false);
+              if (!mounted) return;
+              setState(() {
+                _devUnlocked = false;
+              });
+            }),
           // Help / About
           const SizedBox(height: 12),
           Padding(
@@ -282,7 +241,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(radius: 28, backgroundColor: Theme.of(ctx).colorScheme.primary.withOpacity(0.16), child: const Icon(Icons.person_outline, color: Colors.white)),
+                    CircleAvatar(radius: 28, backgroundColor: Theme.of(ctx).colorScheme.primary.withAlpha((0.16 * 255).round()), child: const Icon(Icons.person_outline, color: Colors.white)),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
